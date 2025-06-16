@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demo Site Test</title>
+</head>
+<body>
+    <h1>Testing Demo Site Access</h1>
+    <p>Dev Mode: <span id="devMode"></span></p>
+    <p>Current URL: <span id="currentUrl"></span></p>
+    
+    <h2>Test Demo URLs:</h2>
+    <ul>
+        <li><a href="http://localhost:8081/demo/beauty-studio-demo" target="_blank">Beauty Studio Demo</a></li>
+        <li><a href="http://localhost:8081/demo/hair-salon-demo" target="_blank">Hair Salon Demo</a></li>
+    </ul>
+    
+    <h2>Admin URLs:</h2>
+    <ul>
+        <li><a href="http://localhost:8081/admin" target="_blank">Admin Dashboard</a></li>
+        <li><a href="http://localhost:8081/dashboard" target="_blank">Customer Dashboard</a></li>
+    </ul>
+
+    <script>
+        document.getElementById('devMode').textContent = 'VITE_DEV_MODE set to true in .env';
+        document.getElementById('currentUrl').textContent = window.location.href;
+    </script>
+</body>
+</html>

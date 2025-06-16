@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(bun install:*)",
+      "Bash(ls:*)",
+      "Bash(npx vite:*)"
+    ],
+    "deny": []
+  }
+}

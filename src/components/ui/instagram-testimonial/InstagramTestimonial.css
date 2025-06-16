@@ -1,0 +1,138 @@
+
+/* Instagram testimonial styling */
+.instagram-testimonial-wrapper {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.instagram-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Animated gradient background */
+.instagram-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg, 
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(45deg);
+  animation: shine 5s infinite;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+@keyframes shine {
+  0% {
+    top: -100%;
+    left: -100%;
+  }
+  100% {
+    top: 100%;
+    left: 100%;
+  }
+}
+
+/* Hair strands animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.float-animation {
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Instagram heart pulse animation */
+@keyframes heartPulse {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.2);
+  }
+  30% {
+    transform: scale(1);
+  }
+}
+
+.heart-pulse {
+  animation: heartPulse 1.5s infinite;
+}
+
+/* Video controls fade animation */
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Pulsing play button animation */
+@keyframes playPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+.play-button-pulse {
+  animation: playPulse 2s infinite;
+}
+
+/* Video progress bar */
+.video-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(to right, #ec4899, #8b5cf6);
+  transition: width 0.1s linear;
+}
+
+/* Typography enhancements */
+.instagram-card .caption {
+  line-height: 1.4;
+}
+
+.instagram-card .hashtags {
+  color: #8a2be2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .instagram-testimonial-wrapper {
+    max-width: 100%;
+  }
+  
+  .instagram-card {
+    max-width: 100%;
+  }
+}
