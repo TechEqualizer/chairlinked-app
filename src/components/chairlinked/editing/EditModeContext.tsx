@@ -13,29 +13,42 @@ interface EditModeProviderProps {
   children: ReactNode;
   initialEditMode?: boolean;
   isProductionPreview?: boolean; // NEW: allow passing preview status
+  readOnly?: boolean; // NEW: allow forcing read-only mode
 }
 
 export const EditModeProvider: React.FC<EditModeProviderProps> = ({
   children,
   initialEditMode = false,
-  isProductionPreview = false // NEW: defaults to false
+  isProductionPreview = false, // NEW: defaults to false
+  readOnly = false // NEW: defaults to false
 }) => {
-  // In preview mode (view-only), always force isEditMode = false
+  console.log('[EditModeProvider] Initializing with:', {
+    initialEditMode,
+    isProductionPreview,
+    readOnly,
+    finalEditMode: (isProductionPreview || readOnly) ? false : initialEditMode
+  });
+  
+  // In preview mode OR read-only mode, always force isEditMode = false
   const [isEditMode, setIsEditMode] = React.useState(
-    isProductionPreview ? false : initialEditMode
+    (isProductionPreview || readOnly) ? false : initialEditMode
   );
   const [unsaved, setUnsaved] = React.useState(false);
 
   React.useEffect(() => {
-    if (isProductionPreview) setIsEditMode(false);
-  }, [isProductionPreview]);
+    if (isProductionPreview || readOnly) setIsEditMode(false);
+  }, [isProductionPreview, readOnly]);
 
+  const contextValue = {
+    isEditMode: (isProductionPreview || readOnly) ? false : isEditMode,
+    setIsEditMode: (isProductionPreview || readOnly) ? () => {} : setIsEditMode,
+    setUnsaved: (isProductionPreview || readOnly) ? () => {} : setUnsaved
+  };
+  
+  console.log('[EditModeProvider] Context value:', contextValue);
+  
   return (
-    <EditModeContext.Provider value={{
-      isEditMode: isProductionPreview ? false : isEditMode,
-      setIsEditMode: isProductionPreview ? () => {} : setIsEditMode,
-      setUnsaved: isProductionPreview ? () => {} : setUnsaved
-    }}>
+    <EditModeContext.Provider value={contextValue}>
       {children}
     </EditModeContext.Provider>
   );

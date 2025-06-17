@@ -130,16 +130,6 @@ const CustomerDashboard: React.FC = () => {
                       <Edit className="w-4 h-4" />
                       Edit Content
                     </Button>
-                    <Button
-                      onClick={() => {
-                        const url = `https://chairlinked.com/${claimedSite.site_slug}`;
-                        window.open(url, '_blank');
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      View Site
-                    </Button>
                   </div>
                 </div>
               </div>

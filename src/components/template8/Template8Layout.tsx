@@ -11,10 +11,11 @@ interface Template8LayoutProps {
   isProductionPreview?: boolean;
   initialData?: any;
   siteType?: string;
+  readOnly?: boolean;
 }
 
 const Template8Layout: React.FC<Template8LayoutProps> = (props) => {
-  const { businessName = "Creative Studio", initialData, isProductionPreview = false, siteType = 'demo' } = props;
+  const { businessName = "Creative Studio", initialData, isProductionPreview = false, siteType = 'demo', readOnly = false } = props;
   const { 
     pageData, 
     editingState, 
@@ -28,7 +29,7 @@ const Template8Layout: React.FC<Template8LayoutProps> = (props) => {
   } = useEnhancedTemplate8DataPersistence(businessName, initialData);
 
   return (
-    <EditModeProvider initialEditMode={!isProductionPreview} isProductionPreview={isProductionPreview}>
+    <EditModeProvider initialEditMode={!isProductionPreview && !readOnly} isProductionPreview={isProductionPreview} readOnly={readOnly}>
       <Template8LayoutContent 
         businessName={businessName}
         onUpdate={props.onUpdate}

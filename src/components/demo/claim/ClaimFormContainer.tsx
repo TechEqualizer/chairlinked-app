@@ -11,12 +11,14 @@ interface ClaimFormContainerProps {
   isExpired?: boolean;
   onSuccess: (formData: { email: string; name: string }) => void;
   onCancel: () => void;
+  businessName?: string;
 }
 
 export const ClaimFormContainer: React.FC<ClaimFormContainerProps> = ({
   demoSiteId,
   onSuccess,
-  onCancel
+  onCancel,
+  businessName
 }) => {
   const {
     formData,
@@ -26,7 +28,7 @@ export const ClaimFormContainer: React.FC<ClaimFormContainerProps> = ({
     handleSubmit,
     isAlreadyClaimed,
     checkingClaim
-  } = useClaimForm(demoSiteId, () => onSuccess({ email: formData.email, name: formData.name }));
+  } = useClaimForm(demoSiteId, () => onSuccess({ email: formData.email, name: formData.name }), businessName);
 
   if (checkingClaim) {
     return (

@@ -6,7 +6,7 @@ import { useAuthContext } from '@/components/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { DemoClaimData } from '@/types/demoTypes';
 
-export const useClaimSubmission = (demoSiteId: string, onSuccess: () => void) => {
+export const useClaimSubmission = (demoSiteId: string, onSuccess: () => void, businessName?: string) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { signUp } = useAuthContext();
@@ -46,6 +46,19 @@ export const useClaimSubmission = (demoSiteId: string, onSuccess: () => void) =>
       }
       
       console.log('Dev mode: Account created successfully, user:', signUpResult.data?.user?.email);
+      
+      // Store demo site info for dashboard to use
+      const demoInfo = {
+        demoSiteId,
+        businessName: businessName || 'Demo Site',
+        demoSlug: demoSiteId === 'demo-1' ? 'beauty-studio-demo' : 
+                  demoSiteId === 'demo-2' ? 'hair-salon-demo' : 
+                  'beauty-studio-demo', // fallback
+        userEmail: formData.email,
+        userName: formData.name
+      };
+      localStorage.setItem('dev_claimed_demo_info', JSON.stringify(demoInfo));
+      console.log('Dev mode: Stored demo info:', demoInfo);
       
       toast({
         title: "Account created & site claimed! 🎉",

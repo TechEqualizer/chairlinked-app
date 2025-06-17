@@ -7,13 +7,15 @@ interface ChairLinkedRendererProps {
   logoUrl?: string;
   isProductionPreview?: boolean;
   siteType?: string; // New prop to pass site type information
+  readOnly?: boolean; // New prop to disable all inline editing
 }
 
 const ChairLinkedRenderer: React.FC<ChairLinkedRendererProps> = ({ 
   config, 
   logoUrl,
   isProductionPreview = false,
-  siteType = 'demo' // Default to demo for backward compatibility
+  siteType = 'demo', // Default to demo for backward compatibility
+  readOnly = false // Default to allowing editing
 }) => {
   console.log('[ChairLinkedRenderer] Rendering with config:', {
     businessName: config?.businessName,
@@ -21,6 +23,7 @@ const ChairLinkedRenderer: React.FC<ChairLinkedRendererProps> = ({
     hasServices: !!config?.services?.length,
     isProductionPreview,
     siteType,
+    readOnly,
     configKeys: config ? Object.keys(config) : [],
     configSize: config ? JSON.stringify(config).length : 0
   });
@@ -66,6 +69,7 @@ const ChairLinkedRenderer: React.FC<ChairLinkedRendererProps> = ({
       isChairLinkedMode={true}
       isProductionPreview={isProductionPreview}
       siteType={siteType}
+      readOnly={readOnly}
     />
   );
 };

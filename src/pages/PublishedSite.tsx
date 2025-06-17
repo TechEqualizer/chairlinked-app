@@ -8,18 +8,40 @@ import { useTrafficTracking } from '@/hooks/useTrafficTracking';
 import { RouteDebugger } from '@/components/RouteDebugger';
 import { isSitePubliclyAccessible } from '@/utils/lifecycleUtils';
 import { SiteLifecycleStage } from '@/types/siteLifecycle';
+import { useAuthContext } from '@/components/auth/AuthProvider';
 
 const PublishedSite: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [site, setSite] = useState<ChairLinkedSite | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAdmin } = useAuthContext();
 
   // Track traffic for sites (demo sites are handled in DemoSite component)
   useTrafficTracking({
     siteId: site?.id || '',
     siteType: site?.site_type || 'live'
   });
+
+  // Determine if the site should be read-only based on lifecycle stage and user permissions
+  const isReadOnly = (() => {
+    if (!site) return false;
+    
+    const isProductionPreview = new URLSearchParams(window.location.search).get("preview") === "admin";
+    
+    // Admins can always edit (unless in production preview mode)
+    if (isAdmin && !isProductionPreview) return false;
+    
+    // Define lifecycle stages where sites should be read-only for non-admin users
+    const readOnlyStages: SiteLifecycleStage[] = [
+      'claimed',
+      'converting', 
+      'customer_controlled',
+      'live_published'
+    ];
+    
+    return readOnlyStages.includes(site.lifecycle_stage as SiteLifecycleStage);
+  })();
 
   useEffect(() => {
     const loadSite = async () => {
@@ -181,7 +203,10 @@ const PublishedSite: React.FC = () => {
     site_type: site.site_type,
     demo_expires_at: site.demo_expires_at,
     demo_view_count: site.demo_view_count,
-    slug
+    slug,
+    lifecycle_stage: site.lifecycle_stage,
+    isReadOnly,
+    isAdmin
   });
 
   // Only show demo wrapper for actual demo sites that haven't been converted to customer sites
@@ -207,6 +232,7 @@ const PublishedSite: React.FC = () => {
             logoUrl={site.logo_url}
             isProductionPreview={new URLSearchParams(window.location.search).get("preview") === "admin"}
             siteType={site.site_type || 'demo'}
+            readOnly={isReadOnly}
           />
         </DemoSiteWrapper>
       ) : (
@@ -215,6 +241,7 @@ const PublishedSite: React.FC = () => {
           logoUrl={site.logo_url}
           isProductionPreview={new URLSearchParams(window.location.search).get("preview") === "admin"}
           siteType={site.site_type || 'live'}
+          readOnly={isReadOnly}
         />
       )}
     </>

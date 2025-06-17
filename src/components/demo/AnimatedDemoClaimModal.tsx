@@ -85,6 +85,7 @@ export const AnimatedDemoClaimModal: React.FC<AnimatedDemoClaimModalProps> = ({
                   isExpired={isExpired}
                   onSuccess={handleSuccess}
                   onCancel={handleClose}
+                  businessName={businessName}
                 />
               </motion.div>
             )}

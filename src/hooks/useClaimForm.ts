@@ -5,7 +5,7 @@ import { useClaimValidation } from './claim/useClaimValidation';
 import { useClaimStatus } from './claim/useClaimStatus';
 import { useClaimSubmission } from './claim/useClaimSubmission';
 
-export const useClaimForm = (demoSiteId: string, onSuccess: () => void) => {
+export const useClaimForm = (demoSiteId: string, onSuccess: () => void, businessName?: string) => {
   const [formData, setFormData] = useState<DemoClaimData>({
     name: '',
     email: '',
@@ -17,7 +17,7 @@ export const useClaimForm = (demoSiteId: string, onSuccess: () => void) => {
 
   const { validateForm } = useClaimValidation();
   const { isAlreadyClaimed, checkingClaim } = useClaimStatus(demoSiteId);
-  const { isSubmitting, handleSubmit: submitClaim } = useClaimSubmission(demoSiteId, onSuccess);
+  const { isSubmitting, handleSubmit: submitClaim } = useClaimSubmission(demoSiteId, onSuccess, businessName);
 
   // Track completed fields for progress
   useEffect(() => {

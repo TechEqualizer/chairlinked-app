@@ -22,6 +22,15 @@ export function isCustomDomain(): boolean {
 export function getBaseUrl(): string {
   if (typeof window === 'undefined') return '';
   
+  // Check if we're in local development
+  const isLocalDev = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    import.meta.env.VITE_DEV_MODE === 'true';
+  
+  if (isLocalDev) {
+    return window.location.origin;
+  }
+  
   // In production on custom domain
   if (isCustomDomain()) {
     return 'https://chairlinked.com';
@@ -62,14 +71,14 @@ export function generatePreviewUrl(config: SiteUrlConfig): string {
   
   // Demo sites always use the dedicated demo route
   if (siteType === 'demo') {
-    if (isCustomDomain() || baseUrl.includes('chairlinked.com')) {
-      return `https://chairlinked.com/demo/${slug}`;
-    }
     return `${baseUrl}/demo/${slug}`;
   }
   
   // Live sites use custom domain when possible
-  if (isCustomDomain() || baseUrl.includes('chairlinked.com')) {
+  const isLocalDev = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    import.meta.env.VITE_DEV_MODE === 'true';
+  if (isCustomDomain() && !isLocalDev) {
     return `https://chairlinked.com/${slug}`;
   }
   
@@ -84,6 +93,18 @@ export function generatePreviewUrl(config: SiteUrlConfig): string {
 export function generateDisplayUrl(config: SiteUrlConfig): string {
   const { slug, siteType } = config;
   
+  // In dev mode, show the local URL format
+  const isLocalDev = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    import.meta.env.VITE_DEV_MODE === 'true';
+  if (isLocalDev) {
+    const hostname = typeof window !== 'undefined' ? window.location.host : 'localhost:8081';
+    if (siteType === 'demo') {
+      return `${hostname}/demo/${slug}`;
+    }
+    return `${hostname}/${slug}`;
+  }
+  
   if (siteType === 'demo') {
     return `chairlinked.com/demo/${slug}`;
   }
@@ -97,12 +118,21 @@ export function generateDisplayUrl(config: SiteUrlConfig): string {
  */
 export function generateShareableUrl(config: SiteUrlConfig): string {
   const { slug, siteType } = config;
+  const baseUrl = getBaseUrl();
   
   if (siteType === 'demo') {
-    return `https://chairlinked.com/demo/${slug}`;
+    return `${baseUrl}/demo/${slug}`;
   }
   
-  return `https://chairlinked.com/${slug}`;
+  // Use production URL only if not in dev mode
+  const isLocalDev = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    import.meta.env.VITE_DEV_MODE === 'true';
+  if (!isLocalDev && isCustomDomain()) {
+    return `https://chairlinked.com/${slug}`;
+  }
+  
+  return `${baseUrl}/${slug}`;
 }
 
 /**
@@ -169,8 +199,11 @@ export function getPublicUrl(config: SiteUrlConfig): string {
     return `${baseUrl}/demo/${slug}`;
   }
   
-  // For live sites, use custom domain format
-  if (isCustomDomain() || baseUrl.includes('chairlinked.com')) {
+  // For live sites, use custom domain format only in production
+  const isLocalDev = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    import.meta.env.VITE_DEV_MODE === 'true';
+  if (isCustomDomain() && !isLocalDev) {
     return `https://chairlinked.com/${slug}`;
   }
   

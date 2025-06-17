@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useEditMode } from '@/components/chairlinked/editing/EditModeContext';
 
 interface SimpleEditableTextProps {
   value: string;
@@ -20,6 +21,7 @@ const SimpleEditableText: React.FC<SimpleEditableTextProps> = ({
   disabled = false,
   style
 }) => {
+  const { isEditMode } = useEditMode();
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLDivElement>(null);
@@ -27,10 +29,29 @@ const SimpleEditableText: React.FC<SimpleEditableTextProps> = ({
   const cursorPositioned = useRef(false);
   const isTyping = useRef(false);
 
+  // Check if editing should be disabled (either by prop or global context)
+  const isDisabled = disabled || !isEditMode;
+
+  console.log('[SimpleEditableText] Render:', {
+    value: value.substring(0, 50) + '...',
+    disabled,
+    isEditMode,
+    isDisabled,
+    isEditing
+  });
+
   useEffect(() => {
     setLocalValue(value);
     lastSavedValue.current = value;
   }, [value]);
+
+  // Exit editing mode when global edit mode is disabled
+  useEffect(() => {
+    if (isEditing && isDisabled) {
+      console.log('[SimpleEditableText] Exiting edit mode due to global edit mode disabled');
+      setIsEditing(false);
+    }
+  }, [isDisabled, isEditing]);
 
   useEffect(() => {
     if (isEditing && inputRef.current && !cursorPositioned.current) {
@@ -64,11 +85,17 @@ const SimpleEditableText: React.FC<SimpleEditableTextProps> = ({
   }, [isEditing, value]);
 
   const handleClick = () => {
-    if (!disabled) {
+    if (!isDisabled) {
       console.log('[SimpleEditableText] Starting edit mode, current value:', value);
       setIsEditing(true);
       setLocalValue(value);
       cursorPositioned.current = false;
+    } else {
+      console.log('[SimpleEditableText] Click ignored - editing disabled:', {
+        disabled,
+        isEditMode,
+        isDisabled
+      });
     }
   };
 
@@ -150,7 +177,7 @@ const SimpleEditableText: React.FC<SimpleEditableTextProps> = ({
     }
   };
 
-  if (isEditing && !disabled) {
+  if (isEditing && !isDisabled) {
     return (
       <div
         ref={inputRef}
@@ -173,8 +200,8 @@ const SimpleEditableText: React.FC<SimpleEditableTextProps> = ({
     TagComponent,
     {
       onClick: handleClick,
-      className: `${className} ${disabled ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100 hover:bg-opacity-50'} rounded px-2 py-1 transition-colors`,
-      title: disabled ? undefined : "Click to edit",
+      className: `${className} ${isDisabled ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100 hover:bg-opacity-50'} rounded px-2 py-1 transition-colors`,
+      title: isDisabled ? undefined : "Click to edit",
       style
     },
     value || placeholder

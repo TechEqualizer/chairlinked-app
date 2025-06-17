@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { DemoClaimModal } from './DemoClaimModal';
 import { DemoStatus } from '@/types/demoTypes';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthContext } from '@/components/auth/AuthProvider';
 import { Sparkles, Clock, Zap, CheckCircle } from 'lucide-react';
 
 interface DemoClaimButtonProps {
@@ -17,24 +18,94 @@ export const DemoClaimButton: React.FC<DemoClaimButtonProps> = ({
   demoSiteId,
   businessName
 }) => {
+  const { user } = useAuthContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAlreadyClaimed, setIsAlreadyClaimed] = useState(false);
+  const [isClaimedByCurrentUser, setIsClaimedByCurrentUser] = useState(false);
   const [checkingClaim, setCheckingClaim] = useState(true);
 
-  // Check if site is already claimed
+  console.log('[DemoClaimButton] Component render:', {
+    demoSiteId,
+    businessName,
+    user: user?.email,
+    isClaimedByCurrentUser,
+    isAlreadyClaimed,
+    checkingClaim
+  });
+
+  // Check if site is already claimed and by whom
   useEffect(() => {
     const checkExistingClaim = async () => {
-      // Dev mode - simulate unclaimed demo sites
       const isDevMode = import.meta.env.VITE_DEV_MODE === 'true';
+      
       if (isDevMode) {
-        // Simulate some already claimed sites
-        const claimedSites = ['demo-2']; // hair-salon-demo is claimed
-        setIsAlreadyClaimed(claimedSites.includes(demoSiteId));
+        console.log('[DemoClaimButton] Starting dev mode check:', {
+          demoSiteId,
+          userEmail: user?.email,
+          hasUser: !!user
+        });
+        
+        // Check localStorage to see if current user claimed this site
+        const claimedDemoInfo = localStorage.getItem('dev_claimed_demo_info');
+        console.log('[DemoClaimButton] localStorage data:', claimedDemoInfo);
+        
+        if (claimedDemoInfo) {
+          try {
+            const demoInfo = JSON.parse(claimedDemoInfo);
+            // In dev mode, if localStorage has claim info for this demo site, 
+            // we assume the current session user claimed it
+            const currentUserClaimedThis = demoInfo.demoSiteId === demoSiteId;
+            
+            console.log('[DemoClaimButton] Dev mode claim check:', {
+              demoSiteId,
+              userEmail: user?.email,
+              storedInfo: demoInfo,
+              demoSiteIdMatch: demoInfo.demoSiteId === demoSiteId,
+              currentUserClaimedThis
+            });
+            
+            setIsClaimedByCurrentUser(currentUserClaimedThis);
+            // For others, simulate some claimed sites
+            const otherClaimedSites = ['demo-2']; // hair-salon-demo claimed by someone else
+            setIsAlreadyClaimed(otherClaimedSites.includes(demoSiteId) && !currentUserClaimedThis);
+          } catch (e) {
+            console.log('Could not parse claimed demo info:', e);
+            setIsClaimedByCurrentUser(false);
+            setIsAlreadyClaimed(false);
+          }
+        } else {
+          console.log('[DemoClaimButton] No claim info in localStorage');
+          // No claim info, check general claimed status
+          const claimedSites = ['demo-2']; 
+          setIsAlreadyClaimed(claimedSites.includes(demoSiteId));
+          setIsClaimedByCurrentUser(false);
+        }
+        
         setCheckingClaim(false);
         return;
       }
 
       try {
+        // Check if current user claimed this site
+        if (user?.email) {
+          const { data: userClaimData, error: userClaimError } = await supabase
+            .from('demo_prospect_leads')
+            .select('id, email')
+            .eq('demo_site_id', demoSiteId)
+            .eq('email', user.email)
+            .maybeSingle();
+
+          if (userClaimError) {
+            console.error('Error checking user claim:', userClaimError);
+          } else if (userClaimData) {
+            setIsClaimedByCurrentUser(true);
+            setIsAlreadyClaimed(false);
+            setCheckingClaim(false);
+            return;
+          }
+        }
+
+        // Check if anyone else claimed this site
         const { data, error } = await supabase
           .from('demo_prospect_leads')
           .select('id')
@@ -45,6 +116,7 @@ export const DemoClaimButton: React.FC<DemoClaimButtonProps> = ({
           console.error('Error checking existing claim:', error);
         } else {
           setIsAlreadyClaimed(!!data);
+          setIsClaimedByCurrentUser(false);
         }
       } catch (error) {
         console.error('Error checking existing claim:', error);
@@ -56,7 +128,7 @@ export const DemoClaimButton: React.FC<DemoClaimButtonProps> = ({
     if (demoSiteId) {
       checkExistingClaim();
     }
-  }, [demoSiteId]);
+  }, [demoSiteId, user?.email]);
 
   const handleOpenModal = () => {
     if (isAlreadyClaimed) return;
@@ -68,6 +140,16 @@ export const DemoClaimButton: React.FC<DemoClaimButtonProps> = ({
     console.log('DemoClaimButton: Closing modal');
     setIsModalOpen(false);
   };
+
+  // Hide button completely if current user has already claimed this site
+  if (isClaimedByCurrentUser) {
+    console.log('[DemoClaimButton] Current user has claimed this site - hiding button', {
+      demoSiteId,
+      userEmail: user?.email,
+      isClaimedByCurrentUser
+    });
+    return null;
+  }
 
   if (checkingClaim) {
     return (

@@ -58,12 +58,31 @@ export async function saveSite(request: SaveSiteRequest): Promise<{ data: ChairL
 
 export async function getSiteBySlug(slug: string): Promise<{ data: ChairLinkedSite | null; error: any }> {
   try {
+    console.log('[getSiteBySlug] ========== GETTING SITE BY SLUG ==========');
     console.log('[getSiteBySlug] Initial DB query for slug:', slug);
+    console.log('[getSiteBySlug] Environment check - VITE_DEV_MODE:', import.meta.env.VITE_DEV_MODE);
     
     // Dev mode mock data
     const isDevMode = import.meta.env.VITE_DEV_MODE === 'true';
+    console.log('[getSiteBySlug] Is dev mode:', isDevMode);
+    
     if (isDevMode) {
       console.log('[getSiteBySlug] Dev mode: using mock data for slug:', slug);
+      
+      // Check if this demo has been claimed by checking localStorage
+      const claimedDemoInfo = localStorage.getItem('dev_claimed_demo_info');
+      let claimedDemoData = null;
+      
+      if (claimedDemoInfo) {
+        try {
+          claimedDemoData = JSON.parse(claimedDemoInfo);
+          console.log('[getSiteBySlug] Found claimed demo info:', claimedDemoData);
+        } catch (e) {
+          console.log('Could not parse claimed demo info');
+        }
+      } else {
+        console.log('[getSiteBySlug] No claimed demo info in localStorage');
+      }
       
       const mockSites = [
         {
@@ -71,7 +90,17 @@ export async function getSiteBySlug(slug: string): Promise<{ data: ChairLinkedSi
           business_name: 'Beauty Studio Demo',
           site_slug: 'beauty-studio-demo',
           site_type: 'demo',
-          lifecycle_stage: 'shared',
+          // If this demo has been claimed, set lifecycle to 'claimed', otherwise 'shared'
+          lifecycle_stage: (() => {
+            const isClaimed = claimedDemoData?.demoSiteId === 'demo-1';
+            const stage = isClaimed ? 'claimed' : 'shared';
+            console.log('[getSiteBySlug] Setting lifecycle_stage for demo-1:', {
+              isClaimed,
+              claimedDemoSiteId: claimedDemoData?.demoSiteId,
+              stage
+            });
+            return stage;
+          })(),
           status: 'published',
           demo_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
           demo_view_count: 5,
@@ -120,19 +149,27 @@ export async function getSiteBySlug(slug: string): Promise<{ data: ChairLinkedSi
         }
       ];
       
+      console.log('[getSiteBySlug] Available mock sites:', mockSites.map(s => ({ slug: s.site_slug, name: s.business_name, type: s.site_type })));
+      
       // Find exact match first
+      console.log('[getSiteBySlug] Looking for exact match with slug:', slug);
       let site = mockSites.find(s => s.site_slug === slug);
+      console.log('[getSiteBySlug] Exact match result:', site ? site.business_name : 'none');
       
       // If not found and doesn't start with demo-, try with demo- prefix
       if (!site && !slug.startsWith('demo-')) {
+        console.log('[getSiteBySlug] No exact match, trying with demo- prefix:', `demo-${slug}`);
         site = mockSites.find(s => s.site_slug === `demo-${slug}`);
+        console.log('[getSiteBySlug] Demo prefix match result:', site ? site.business_name : 'none');
       }
       
       if (site) {
         console.log('[getSiteBySlug] Dev mode: Found mock site:', site.business_name);
+        console.log('[getSiteBySlug] Returning site data:', site);
         return { data: site as ChairLinkedSite, error: null };
       } else {
         console.log('[getSiteBySlug] Dev mode: No mock site found for slug:', slug);
+        console.log('[getSiteBySlug] Searched in:', mockSites.map(s => s.site_slug));
         return { data: null, error: { message: 'Site not found' } };
       }
     }

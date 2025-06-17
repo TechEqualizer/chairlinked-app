@@ -18,10 +18,23 @@ const fetchClaimedSite = async (userEmail: string, userId: string): Promise<Clai
   // Dev mode mock data
   const isDevMode = import.meta.env.VITE_DEV_MODE === 'true';
   if (isDevMode) {
+    // Get the demo site info from localStorage if available (set during claim process)
+    const claimedDemoInfo = localStorage.getItem('dev_claimed_demo_info');
+    let demoInfo = null;
+    
+    if (claimedDemoInfo) {
+      try {
+        demoInfo = JSON.parse(claimedDemoInfo);
+      } catch (e) {
+        console.log('Could not parse claimed demo info');
+      }
+    }
+    
+    // Use the actual claimed demo site info or fallback to default
     return {
-      id: 'dev-claimed-site-123',
-      business_name: 'My Claimed Demo Site',
-      site_slug: 'my-claimed-demo-site',
+      id: demoInfo?.demoSiteId || 'demo-1',
+      business_name: demoInfo?.businessName || 'Beauty Studio Demo',
+      site_slug: demoInfo?.demoSlug || 'beauty-studio-demo',
       logo_url: null,
       status: 'claimed',
       site_type: 'demo',

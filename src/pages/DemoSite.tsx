@@ -7,12 +7,16 @@ import { DemoSiteWrapper } from '@/components/demo/DemoSiteWrapper';
 import { useTrafficTracking } from '@/hooks/useTrafficTracking';
 import { RouteDebugger } from '@/components/RouteDebugger';
 import { isSitePubliclyAccessible } from '@/utils/lifecycleUtils';
+import { useAuthContext } from '@/components/auth/AuthProvider';
+import { SiteLifecycleStage } from '@/types/siteLifecycle';
 
 const DemoSite: React.FC = () => {
+  console.log('[DemoSite] Component instance created');
   const { slug } = useParams<{ slug: string }>();
   const [site, setSite] = useState<ChairLinkedSite | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAdmin } = useAuthContext();
 
   // Track if this is an admin/production preview via the query param
   const isProductionPreview = (() => {
@@ -23,6 +27,40 @@ const DemoSite: React.FC = () => {
     return false;
   })();
 
+  // Determine if the site should be read-only based on lifecycle stage and user permissions
+  const isReadOnly = (() => {
+    if (!site) {
+      console.log('[DemoSite] isReadOnly: false (no site)');
+      return false;
+    }
+    
+    // Admins can always edit (unless in production preview mode)
+    if (isAdmin && !isProductionPreview) {
+      console.log('[DemoSite] isReadOnly: false (admin can edit)', { isAdmin, isProductionPreview });
+      return false;
+    }
+    
+    // Define lifecycle stages where demos should be read-only for non-admin users
+    const readOnlyStages: SiteLifecycleStage[] = [
+      'claimed',
+      'converting', 
+      'customer_controlled',
+      'live_published'
+    ];
+    
+    const shouldBeReadOnly = readOnlyStages.includes(site.lifecycle_stage as SiteLifecycleStage);
+    
+    console.log('[DemoSite] isReadOnly calculation:', {
+      siteLifecycleStage: site.lifecycle_stage,
+      readOnlyStages,
+      isAdmin,
+      isProductionPreview,
+      shouldBeReadOnly
+    });
+    
+    return shouldBeReadOnly;
+  })();
+
   // Track traffic for demo sites
   useTrafficTracking({
     siteId: site?.id || '',
@@ -31,6 +69,9 @@ const DemoSite: React.FC = () => {
 
   useEffect(() => {
     const loadDemoSite = async () => {
+      console.log('[DemoSite] ========== LOADING DEMO SITE ==========');
+      console.log('[DemoSite] Component mounted for slug:', slug);
+      
       if (!slug) {
         console.error('[DemoSite] No demo slug provided');
         setError('No demo slug provided');
@@ -49,7 +90,9 @@ const DemoSite: React.FC = () => {
           href: window.location.href
         });
 
+        console.log('[DemoSite] About to call getSiteBySlug with slug:', slug);
         const { data, error: fetchError } = await getSiteBySlug(slug);
+        console.log('[DemoSite] getSiteBySlug returned:', { data, error: fetchError });
         
         if (fetchError) {
           console.error('[DemoSite] Error loading demo site:', {
@@ -169,6 +212,9 @@ const DemoSite: React.FC = () => {
     demo_view_count: site.demo_view_count,
     slug,
     lifecycle_stage: site.lifecycle_stage,
+    isReadOnly,
+    isAdmin,
+    isProductionPreview
   });
 
   return (
@@ -189,6 +235,7 @@ const DemoSite: React.FC = () => {
           logoUrl={site.logo_url}
           isProductionPreview={isProductionPreview}
           siteType="demo"
+          readOnly={isReadOnly}
         />
       </DemoSiteWrapper>
     </>

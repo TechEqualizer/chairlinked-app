@@ -17,7 +17,18 @@ interface DemoSitePreviewProps {
 }
 
 export const DemoSitePreview: React.FC<DemoSitePreviewProps> = ({ claimedSite }) => {
-  const getDemoUrl = () => `https://chairlinked.com/${claimedSite.site_slug}`;
+  const getDemoUrl = () => {
+    // Use localhost in development, production URL otherwise
+    const isLocalDev = window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1';
+    
+    const baseUrl = isLocalDev 
+      ? window.location.origin 
+      : 'https://chairlinked.com';
+    
+    // Always use /demo/ path for demo sites
+    return `${baseUrl}/demo/${claimedSite.site_slug}`;
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,7 +84,16 @@ export const DemoSitePreview: React.FC<DemoSitePreviewProps> = ({ claimedSite })
 
         {/* View Button */}
         <Button
-          onClick={() => window.open(getDemoUrl(), '_blank')}
+          onClick={() => {
+            const url = getDemoUrl();
+            console.log('DemoSitePreview - View Demo clicked:', {
+              claimedSiteSlug: claimedSite.site_slug,
+              generatedUrl: url,
+              hostname: window.location.hostname,
+              origin: window.location.origin
+            });
+            window.open(url, '_blank');
+          }}
           variant="outline"
           size="sm"
           className="flex items-center gap-2 bg-white hover:bg-slate-50"
