@@ -19,7 +19,8 @@ import {
   Edit,
   LogOut,
   UserCheck,
-  MessageSquare
+  MessageSquare,
+  Factory
 } from "lucide-react";
 import { useAuthContext } from "@/components/auth/AuthProvider";
 
@@ -30,6 +31,7 @@ export const AdminSidebar: React.FC = () => {
 
   const menuItems = [
     { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+    { title: "Demo Factory", url: "/admin/demo-factory", icon: Factory },
     { title: "Sites", url: "/admin/demos", icon: Edit },
     { title: "Templates", url: "/admin/templates", icon: LayoutDashboard },
     { title: "Team", url: "/admin/team", icon: Users },

@@ -26,7 +26,7 @@ export function useAuth(): AuthReturn {
   const { signUp, signIn, signOut } = useAuthActions();
   const { retryProfileFetch } = useProfileManager();
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const isCustomer = profile?.role === 'customer';
 
   console.log('[useAuth] Current state:', {

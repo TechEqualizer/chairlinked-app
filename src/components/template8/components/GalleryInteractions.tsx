@@ -43,7 +43,7 @@ const GalleryInteractions: React.FC<GalleryInteractionsProps> = ({
     return words.map((word, index) => {
       if (word.startsWith('#')) {
         return (
-          <React.Fragment key={index}>
+          <span key={index}>
             {index > 0 && ' '}
             <span 
               className="font-medium transition-colors duration-200 hover:opacity-80 cursor-pointer"
@@ -51,14 +51,14 @@ const GalleryInteractions: React.FC<GalleryInteractionsProps> = ({
             >
               {word}
             </span>
-          </React.Fragment>
+          </span>
         );
       }
       return (
-        <React.Fragment key={index}>
+        <span key={index}>
           {index > 0 && ' '}
           {word}
-        </React.Fragment>
+        </span>
       );
     });
   };

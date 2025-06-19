@@ -148,11 +148,13 @@ export const Template8SectionRenderer: React.FC<Template8SectionRendererProps> =
 
         return (
           <SectionErrorBoundary key={sectionId} sectionId={sectionId} isProductionPreview={isProductionPreview}>
-            <SectionComponent
-              pageData={pageData}
-              onUpdate={onUpdate}
-              isProductionPreview={isProductionPreview}
-            />
+            <div data-section={sectionId} data-section-id={sectionId} id={`${sectionId}-section`}>
+              <SectionComponent
+                pageData={pageData}
+                onUpdate={onUpdate}
+                isProductionPreview={isProductionPreview}
+              />
+            </div>
           </SectionErrorBoundary>
         );
       });
@@ -162,11 +164,13 @@ export const Template8SectionRenderer: React.FC<Template8SectionRendererProps> =
     <>
       {/* Navbar - always visible with error boundary */}
       <SectionErrorBoundary sectionId="navbar" isProductionPreview={isProductionPreview}>
-        <EditableTemplate8NavbarBlock 
-          pageData={pageData} 
-          onUpdate={onUpdate} 
-          isProductionPreview={isProductionPreview}
-        />
+        <div data-section="navbar" data-section-id="navbar" id="navbar-section">
+          <EditableTemplate8NavbarBlock 
+            pageData={pageData} 
+            onUpdate={onUpdate} 
+            isProductionPreview={isProductionPreview}
+          />
+        </div>
       </SectionErrorBoundary>
       
       {/* Dynamic sections based on configuration */}
@@ -174,12 +178,14 @@ export const Template8SectionRenderer: React.FC<Template8SectionRendererProps> =
       
       {/* Footer - always visible with site type information */}
       <SectionErrorBoundary sectionId="footer" isProductionPreview={isProductionPreview}>
-        <EditableTemplate8FooterBlock 
-          pageData={pageData} 
-          onUpdate={onUpdate}
-          isProductionPreview={isProductionPreview}
-          siteType={siteType}
-        />
+        <div data-section="footer" data-section-id="footer" id="footer-section">
+          <EditableTemplate8FooterBlock 
+            pageData={pageData} 
+            onUpdate={onUpdate}
+            isProductionPreview={isProductionPreview}
+            siteType={siteType}
+          />
+        </div>
       </SectionErrorBoundary>
     </>
   );

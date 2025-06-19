@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // FIXED: More robust admin status check
   const isAdmin = useMemo(() => {
-    const adminStatus = profile?.role === 'admin';
+    const adminStatus = profile?.role === 'admin' || profile?.role === 'super_admin';
     console.log('[AuthProvider] Admin status check:', {
       hasProfile: !!profile,
       role: profile?.role,

@@ -17,6 +17,7 @@ const DashboardBypass = lazy(() => import("./pages/DashboardBypass"));
 
 // Lazy load admin pages
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const DemoFactory = lazy(() => import("./pages/DemoFactory"));
 const AdminDemoSites = lazy(() => import("./pages/AdminDemoSites"));
 const AdminTemplates = lazy(() => import("./pages/AdminTemplates"));
 const AdminTeam = lazy(() => import("./pages/AdminTeam"));
@@ -68,6 +69,9 @@ const DemoSite = lazy(() => import("./pages/DemoSite"));
 // Debug component for testing
 const DebugDemo = lazy(() => import("./pages/DebugDemo"));
 
+// MVP Test component
+const MVPTest = lazy(() => import("./pages/MVPTest"));
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -90,6 +94,7 @@ function App() {
                   <Route path="/dashboard" element={<CustomerDashboard />} />
                   <Route path="/modern-dashboard" element={<ModernDashboardPage />} />
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/demo-factory" element={<DemoFactory />} />
                   <Route path="/admin/demos" element={<AdminDemoSites />} />
                   <Route path="/admin/templates" element={<AdminTemplates />} />
                   <Route path="/admin/team" element={<AdminTeam />} />
@@ -109,6 +114,10 @@ function App() {
                   {/* Debug route */}
                   {process.env.NODE_ENV === 'development' && (
                     <Route path="/debug-demo" element={<DebugDemo />} />
+                  )}
+                  {/* MVP Test route */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <Route path="/mvp-test" element={<MVPTest />} />
                   )}
                   {/* Dedicated demo route */}
                   <Route path="/demo/:slug" element={<DemoSite />} />

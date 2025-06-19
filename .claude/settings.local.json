@@ -4,7 +4,10 @@
       "Bash(npm run dev:*)",
       "Bash(bun install:*)",
       "Bash(ls:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(true)",
+      "Bash(mkdir:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

@@ -7,6 +7,7 @@ import { useSectionManager } from "../editing/hooks/useSectionManager";
 import FloatingEditButton from "../components/FloatingEditButton";
 import EnhancedFullScreenEditingFlow from "../editing/EnhancedFullScreenEditingFlow";
 import ChairlinkedBadge from "@/components/common/ChairlinkedBadge";
+import SectionAwareSidebar from "../editing/components/SectionAwareSidebar";
 import { Template8SectionRenderer } from "./Template8SectionRenderer";
 import { Template8LoadingState } from "./Template8LoadingState";
 import { Template8StatusIndicators } from "./Template8StatusIndicators";
@@ -48,6 +49,8 @@ export const Template8LayoutContent: React.FC<Template8LayoutContentProps> = ({
   hasRecoveredSession
 }) => {
   const [isEditingMode, setIsEditingMode] = useState(editingState.isEditingMode || false);
+  const [showSectionSidebar, setShowSectionSidebar] = useState(false);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const navigate = useNavigate();
   const { isAdmin } = useAuthContext();
   const { getVisibleSections } = useSectionManager(pageData);
@@ -80,6 +83,14 @@ export const Template8LayoutContent: React.FC<Template8LayoutContentProps> = ({
   const handleNavigateToAdmin = () => {
     console.log('[Template8Layout] Navigating to admin dashboard');
     navigate('/admin');
+  };
+
+  const handleToggleSectionSidebar = () => {
+    setShowSectionSidebar(!showSectionSidebar);
+  };
+
+  const handleSectionChange = (index: number) => {
+    setCurrentSectionIndex(index);
   };
 
   // Show loading state while data is being loaded
@@ -126,7 +137,32 @@ export const Template8LayoutContent: React.FC<Template8LayoutContentProps> = ({
 
           {/* Floating Edit Button - hide completely in production preview mode */}
           {!isEditingMode && !isChairLinkedMode && !isProductionPreview && (
-            <FloatingEditButton onClick={handleEditClick} />
+            <>
+              <FloatingEditButton onClick={handleEditClick} />
+              
+              {/* Section-Aware Sidebar - Only show when not in full editing mode */}
+              <SectionAwareSidebar
+                pageData={pageData}
+                onUpdate={finalOnUpdate}
+                currentSectionIndex={currentSectionIndex}
+                onSectionChange={handleSectionChange}
+                isVisible={showSectionSidebar}
+                onToggleVisibility={handleToggleSectionSidebar}
+              />
+              
+              {/* Quick Toggle Button for Section Sidebar */}
+              {!showSectionSidebar && (
+                <button
+                  onClick={handleToggleSectionSidebar}
+                  className="fixed left-4 bottom-4 z-40 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-3 shadow-lg hover:shadow-xl transition-all duration-300"
+                  title="Open Section Navigator"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
+            </>
           )}
 
           {/* Enhanced Full Screen Editing Flow - disable in production preview */}
