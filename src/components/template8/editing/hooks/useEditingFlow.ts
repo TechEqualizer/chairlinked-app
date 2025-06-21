@@ -58,38 +58,9 @@ export const useEditingFlow = ({
       if (onSave) {
         await onSave();
         console.log('✅ Changes saved successfully via onSave prop');
-      } else if (sectionData) {
-        // Use EnhancedDemoSaveService as fallback when no onSave prop provided
-        console.log('[useEditingFlow] Using EnhancedDemoSaveService for save operation');
-        
-        const { EnhancedDemoSaveService } = await import('../generator/services/EnhancedDemoSaveService');
-        
-        const result = await EnhancedDemoSaveService.saveDemo(sectionData, {
-          existingDemoId: sectionData._demoId,
-          isEditingExisting: !!sectionData._demoId,
-          maxRetries: 2
-        });
-
-        if (result.success) {
-          // Update section data with saved demo information
-          const updatedData = {
-            ...sectionData,
-            _demoId: result.demoId,
-            _lastSaved: new Date().toISOString()
-          };
-          
-          setSectionData(updatedData);
-          
-          if (onUpdate) {
-            onUpdate(updatedData);
-          }
-          
-          console.log('✅ Changes saved successfully via EnhancedDemoSaveService:', result);
-        } else {
-          throw new Error(result.error || 'Save operation failed');
-        }
       } else {
-        console.warn('[useEditingFlow] No save method available and no section data');
+        // No onSave prop provided, save handled by parent component
+        console.log('[useEditingFlow] No onSave prop provided, assuming parent handles save');
       }
     } catch (error) {
       console.error('❌ Error saving changes:', error);

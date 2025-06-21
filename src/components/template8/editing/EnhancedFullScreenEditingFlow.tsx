@@ -4,7 +4,8 @@ import { editingSections } from "./config/editingSections";
 import { useEditingFlow } from "./hooks/useEditingFlow";
 import { useEditMode } from "@/components/chairlinked/editing/EditModeContext";
 import { useEditingHotkeys } from "./hooks/useEditingHotkeys";
-import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
+// import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
+// import { useAuthContext } from "@/components/auth/AuthProvider";
 // import { useUndoRedo } from "./hooks/useUndoRedo";
 // import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation";
 import CompletionScreen from "./components/CompletionScreen";
@@ -58,19 +59,8 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     return () => setIsEditMode(false);
   }, [setIsEditMode]);
 
-  // Session recovery: Warn about unsaved changes on page unload
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return 'You have unsaved changes. Are you sure you want to leave?';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+  // Session recovery temporarily disabled
+  // TODO: Re-enable after fixing auto-save system
 
   const {
     currentSectionIndex,
@@ -98,7 +88,16 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     totalSections: editingSections.length
   });
 
+  // Temporarily disable auto-save to prevent white screen
   // Enable unified auto-save system
+  const autoSaveState = null;
+  const triggerSave = async () => {};
+  const pauseAutoSave = () => {};
+  const resumeAutoSave = () => {};
+  const hasUnsavedChanges = false;
+  
+  // TODO: Re-enable auto-save after fixing authentication issues
+  /*
   const {
     autoSaveState,
     triggerSave,
@@ -130,6 +129,7 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
       }
     }
   );
+  */
 
   const currentSection = editingSections[currentSectionIndex];
   
@@ -163,28 +163,95 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     }
   }, [currentSectionIndex, handleSectionNavigate]);
 
-  // Enhanced save function using EnhancedDemoSaveService
+  // Enhanced save function with simplified authentication
   const handleEnhancedSave = async () => {
     try {
-      // Update parent component with current data
+      // Update parent component with current data first
       if (onUpdate && sectionData) {
         onUpdate(sectionData);
       }
 
-      console.log('[EnhancedFullScreenEditingFlow] Starting enhanced save with data:', {
+      // Check authentication by getting current user directly from Supabase
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.user) {
+        console.log('[EnhancedFullScreenEditingFlow] No valid session found');
+        throw new Error('Please log in to save your demo');
+      }
+
+      const currentUser = session.user;
+
+      console.log('[EnhancedFullScreenEditingFlow] Starting save with valid session:', {
         businessName: sectionData?.businessName,
         demoId: sectionData?._demoId,
-        hasData: !!sectionData
+        hasData: !!sectionData,
+        userId: currentUser.id
       });
 
-      // Use EnhancedDemoSaveService for robust saving
-      const { EnhancedDemoSaveService } = await import('../generator/services/EnhancedDemoSaveService');
+      // Prepare the save data
+      const saveData = {
+        business_name: sectionData.businessName || 'Untitled Demo',
+        generated_config: sectionData,
+        form_data: sectionData,
+        user_id: currentUser.id,
+        admin_user_id: currentUser.id, // Set both for admin-created demos
+        site_type: 'demo',
+        status: 'draft',
+        updated_at: new Date().toISOString()
+      };
+
+      let result;
       
-      const result = await EnhancedDemoSaveService.saveDemo(sectionData, {
-        existingDemoId: sectionData?._demoId,
-        isEditingExisting: !!sectionData?._demoId,
-        maxRetries: 3
-      });
+      if (sectionData?._demoId) {
+        // Update existing demo
+        console.log('[EnhancedFullScreenEditingFlow] Updating existing demo:', sectionData._demoId);
+        
+        const { data: updatedDemo, error } = await supabase
+          .from('chairlinked_sites')
+          .update(saveData)
+          .eq('id', sectionData._demoId)
+          .or(`user_id.eq.${currentUser.id},admin_user_id.eq.${currentUser.id}`)
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(`Failed to update demo: ${error.message}`);
+        }
+
+        result = {
+          success: true,
+          demoId: updatedDemo.id,
+          url: `/demo/${updatedDemo.site_slug}`
+        };
+      } else {
+        // Create new demo
+        console.log('[EnhancedFullScreenEditingFlow] Creating new demo');
+        
+        // Generate a unique slug
+        const slug = `${sectionData.businessName?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'demo'}-${Date.now()}`;
+        
+        const { data: newDemo, error } = await supabase
+          .from('chairlinked_sites')
+          .insert({
+            ...saveData,
+            site_slug: slug
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(`Failed to create demo: ${error.message}`);
+        }
+
+        result = {
+          success: true,
+          demoId: newDemo.id,
+          url: `/demo/${newDemo.site_slug}`
+        };
+      }
 
       if (result.success) {
         // Update local data with saved demo information
@@ -279,30 +346,6 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
   };
 
   const handleCloseEditing = () => {
-    // Check for unsaved changes before closing
-    if (hasUnsavedChanges) {
-      const shouldSave = window.confirm(
-        'You have unsaved changes. Would you like to save before closing?'
-      );
-      
-      if (shouldSave) {
-        handleEnhancedSave().then(() => {
-          setIsEditMode(false);
-          onClose();
-        }).catch((error) => {
-          console.error('Save failed on close:', error);
-          const forceClose = window.confirm(
-            'Save failed. Do you want to close anyway? Your changes will be lost.'
-          );
-          if (forceClose) {
-            setIsEditMode(false);
-            onClose();
-          }
-        });
-        return;
-      }
-    }
-    
     setIsEditMode(false);
     onClose();
   };

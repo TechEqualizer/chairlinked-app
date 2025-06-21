@@ -76,12 +76,38 @@ export const ManualSaveButton: React.FC<ManualSaveButtonProps> = ({
         skipNavigationOnSave
       });
 
-      // Call the provided onSave first to ensure local state is updated
+      // Call the provided onSave - if it exists, it handles the complete save process
       if (onSave) {
-        console.log('[ManualSaveButton] Calling onSave to update local state');
+        console.log('[ManualSaveButton] Calling onSave to handle save process');
         await onSave();
+        
+        // If onSave succeeded, show success message and return
+        const successMessage = isEditMode ? "Changes saved successfully!" : "Demo created successfully!";
+        
+        toast({
+          title: successMessage,
+          description: skipNavigationOnSave ? "Your changes have been saved." : "Redirecting to admin dashboard...",
+          duration: 2000,
+        });
+
+        // Only navigate if skipNavigationOnSave is false
+        if (!skipNavigationOnSave) {
+          setTimeout(() => {
+            if (onSaveSuccessNavigate) {
+              onSaveSuccessNavigate();
+            } else {
+              navigate('/admin');
+            }
+          }, 1000);
+        }
+        
+        setLastSaveAttempt(new Date());
+        return; // Exit early since onSave handled everything
       }
 
+      // Fallback: Use the enhanced save service directly (when no onSave provided)
+      console.log('[ManualSaveButton] No onSave provided, using EnhancedDemoSaveService directly');
+      
       // Recover demo ID if needed
       const recoveredDemoId = DemoIdUtils.recoverDemoId(pageData);
       if (recoveredDemoId && recoveredDemoId !== pageData._demoId) {
@@ -92,7 +118,6 @@ export const ManualSaveButton: React.FC<ManualSaveButtonProps> = ({
         }
       }
       
-      // Use the enhanced save service with current page data
       console.log('[ManualSaveButton] Calling EnhancedDemoSaveService with data:', {
         businessName: pageData.businessName,
         demoId: recoveredDemoId || pageData._demoId,
