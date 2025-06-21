@@ -27,6 +27,14 @@ export const DemoFactoryInterface: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Set page-specific styling for Demo Factory
+  React.useEffect(() => {
+    document.body.style.backgroundColor = '#f8fafc';
+    return () => {
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
+
   // Redirect non-admin users
   if (!isAdmin) {
     return (
@@ -122,52 +130,87 @@ export const DemoFactoryInterface: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <Factory className="w-8 h-8 text-blue-600" />
-              ChairLinked Demo Factory
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Internal production system for creating high-converting Template8 demos
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-600">
-              Logged in as: <span className="font-medium">{user?.email}</span>
+      {/* Enhanced Business-Focused Header */}
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-6 lg:mb-0">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <Factory className="w-8 h-8" />
+                </div>
+                <div>
+                  <h1 className="text-3xl lg:text-4xl font-bold">Demo Factory</h1>
+                  <p className="text-blue-100 text-lg">Production & Analytics Hub</p>
+                </div>
+              </div>
+              <p className="text-blue-100 max-w-2xl leading-relaxed">
+                Strategic command center for creating, deploying, and optimizing high-converting demo websites. 
+                Drive business growth through data-driven demo production and performance analytics.
+              </p>
+              <div className="flex items-center gap-6 mt-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span className="text-blue-100">Production Active</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span className="text-blue-100">{user?.email}</span>
+                </div>
+              </div>
             </div>
-            <Button 
-              onClick={() => setShowCreator(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Demo
-            </Button>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={() => setShowCreator(true)}
+                className="bg-white text-purple-600 hover:bg-gray-50 font-semibold px-6 py-3 text-lg rounded-xl h-auto"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create New Demo
+              </Button>
+              <Button 
+                onClick={() => navigate('/admin')}
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10 font-semibold px-6 py-3 text-lg rounded-xl h-auto"
+              >
+                <Target className="w-5 h-5 mr-2" />
+                Dashboard
+              </Button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Main Interface */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="library" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Library
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="quick-actions" className="flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              Quick Actions
-            </TabsTrigger>
+      <div className="container mx-auto px-4 py-6">
+
+        {/* Business-Focused Navigation */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Production Operations</h2>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>All systems operational</span>
+            </div>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-gray-100">
+              <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <BarChart3 className="w-4 h-4" />
+                Production Metrics
+              </TabsTrigger>
+              <TabsTrigger value="library" className="flex items-center gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                <Settings className="w-4 h-4" />
+                Template Library
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <Target className="w-4 h-4" />
+                Performance Analytics
+              </TabsTrigger>
+              <TabsTrigger value="quick-actions" className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+                <Zap className="w-4 h-4" />
+                Production Tools
+              </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -256,6 +299,7 @@ export const DemoFactoryInterface: React.FC = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );

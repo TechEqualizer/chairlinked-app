@@ -24,7 +24,8 @@ import {
   Circle,
   MoreHorizontal,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Factory
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/components/auth/AuthProvider";
@@ -82,19 +83,31 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
   };
 
   const mainMenuItems = [
-    { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-    { title: "Templates", url: "/admin/templates", icon: LayoutDashboard },
-    { title: "Team", url: "/admin/team", icon: Users },
+    { title: "Demo Factory", url: "/admin", icon: Zap, badge: "NEW", isPrimary: true },
+    { 
+      title: "Production", 
+      url: "/admin/demo-factory", 
+      icon: Factory, 
+      description: "Full Demo Factory Interface"
+    },
+    { 
+      title: "Demo Sites", 
+      url: "/admin/demos", 
+      icon: Globe, 
+      description: "Manage all demo sites"
+    },
+    { title: "Analytics", url: "/admin/analytics", icon: BarChart },
     { title: "Customers", url: "/admin/customers", icon: UserCheck, badge: "8" },
     { title: "Customer Requests", url: "/admin/customer-requests", icon: MessageSquare, hasNotification: true },
-    { title: "Analytics", url: "/admin/analytics", icon: BarChart },
+    { title: "Templates", url: "/admin/templates", icon: FileText },
+    { title: "Team", url: "/admin/team", icon: Users },
     { title: "Settings", url: "/admin/settings", icon: Settings },
   ];
 
   const quickActions = [
-    { name: 'New Demo Site', icon: Plus, action: () => navigate('/admin/demos') },
-    { name: 'Analytics Report', icon: FileText, action: () => navigate('/admin/analytics') },
-    { name: 'System Alerts', icon: Bell, hasNotification: true, action: () => {} },
+    { name: 'Create Demo', icon: Plus, action: () => navigate('/template8-generator') },
+    { name: 'Demo Factory', icon: Factory, action: () => navigate('/admin/demo-factory') },
+    { name: 'Production Analytics', icon: BarChart, action: () => navigate('/admin/analytics') },
   ];
 
   const getStatusInfo = (site: any) => {
@@ -165,18 +178,29 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
         className={cn(
           'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full relative',
           isActive
-            ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white beautiful-shadow'
-            : 'text-slate-700 hover:bg-slate-100'
+            ? item.isPrimary
+              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white beautiful-shadow'
+              : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white beautiful-shadow'
+            : item.isPrimary
+              ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 font-semibold'
+              : 'text-slate-700 hover:bg-slate-100'
         )}
       >
         <Icon className="w-5 h-5" />
-        <span className={cn('font-medium', isActive && 'text-white')}>{item.title}</span>
+        <div className="flex flex-col items-start flex-1">
+          <span className={cn('font-medium', isActive && 'text-white', item.isPrimary && !isActive && 'text-blue-600')}>{item.title}</span>
+          {item.description && !isActive && (
+            <span className="text-xs text-slate-500 text-left">{item.description}</span>
+          )}
+        </div>
         {item.badge && (
           <span className={cn(
             'ml-auto text-xs px-2 py-1 rounded-full font-medium',
             isActive 
               ? 'bg-white/20 text-white' 
-              : 'bg-purple-100 text-purple-800'
+              : item.badge === 'NEW'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-purple-100 text-purple-800'
           )}>
             {item.badge}
           </span>
@@ -207,7 +231,7 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
               className="flex items-center gap-2 beautiful-shadow hover:shadow-md transition-all text-sm font-semibold bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 border rounded-xl py-2.5 px-4"
             >
               <Crown className="w-4 h-4 text-purple-600" />
-              <span className="text-slate-800">ChairLinked Admin</span>
+              <span className="text-slate-800">Demo Factory</span>
               <ChevronDown className={cn(
                 "w-4 h-4 text-slate-500 transition-transform",
                 isWorkspaceOpen && "rotate-180"
@@ -265,9 +289,12 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
               <span className="text-xs text-slate-600">Admin Active</span>
             </div>
           </div>
-          <button className="flex items-center gap-3 w-full py-2.5 px-2 rounded-lg hover:bg-white/60 transition-colors">
-            <Crown className="w-4 h-4 text-purple-600" />
-            <span className="font-medium">Admin Dashboard</span>
+          <button 
+            onClick={() => handleNavigation('/admin')}
+            className="flex items-center gap-3 w-full py-2.5 px-2 rounded-lg hover:bg-white/60 transition-colors"
+          >
+            <Factory className="w-4 h-4 text-purple-600" />
+            <span className="font-medium">Demo Factory Dashboard</span>
             <Zap className="w-4 h-4 ml-auto text-purple-600 fill-current" />
           </button>
           <hr className="my-4 border-slate-200" />
@@ -287,7 +314,8 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
         <div className={cn("px-2 mb-6", isCollapsed && "px-1")}>
           {!isCollapsed && (
             <div className="flex items-center gap-2 w-full text-slate-500 uppercase text-xs tracking-wider font-semibold mb-3">
-              <span>Navigation</span>
+              <Factory className="w-3 h-3" />
+              <span>Demo Factory</span>
             </div>
           )}
           <div className="space-y-1">
@@ -312,7 +340,7 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
               ) : (
                 <ChevronRight className="w-4 h-4" />
               )}
-              <span>Admin Sites</span>
+              <span>Production Sites</span>
               <span className="ml-auto bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs font-medium">
                 {demoSites?.length || 0}
               </span>
@@ -391,6 +419,7 @@ export const EnhancedAdminSidebar: React.FC<EnhancedAdminSidebarProps> = ({ onMo
         <div className={cn("px-2 mt-auto pb-6", isCollapsed && !isMobile && "px-1")}>
           {!isCollapsed && !isMobile && (
             <div className="flex items-center gap-2 w-full text-slate-500 uppercase text-xs tracking-wider font-semibold mb-3">
+              <Zap className="w-3 h-3" />
               <span>Quick Actions</span>
               <Plus className="w-4 h-4 ml-auto hover:bg-slate-200 rounded p-0.5 transition-colors cursor-pointer" />
             </div>

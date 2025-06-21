@@ -43,7 +43,8 @@ export class DemoUpdater {
       console.log('[DemoUpdater] Update successful, URL:', demoUrl);
       return {
         success: true,
-        url: demoUrl
+        url: demoUrl,
+        demoId: updatedDemo.id
       };
     } catch (error) {
       console.error('[DemoUpdater] Unexpected error:', error);

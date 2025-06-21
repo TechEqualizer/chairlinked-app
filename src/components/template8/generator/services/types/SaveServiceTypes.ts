@@ -3,6 +3,7 @@ export interface SaveResult {
   success: boolean;
   error?: string;
   url?: string;
+  demoId?: string;
   requiresAuth?: boolean;
 }
 

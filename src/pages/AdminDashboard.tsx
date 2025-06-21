@@ -12,6 +12,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 const AdminDashboard: React.FC = () => {
   const { demoSites, loading } = useAdminDemoSites();
   const navigate = useNavigate();
+
+  // Set page title to reflect Demo Factory focus
+  React.useEffect(() => {
+    document.title = 'Demo Factory - Production Dashboard | ChairLinked';
+  }, []);
   const {
     createNewDemo,
     duplicateDemo,

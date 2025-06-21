@@ -74,7 +74,8 @@ export class DemoCreator {
       
       return {
         success: true,
-        url: demoUrl
+        url: demoUrl,
+        demoId: newDemo.id
       };
     } catch (error) {
       console.error('[DemoCreator] Unexpected error:', error);

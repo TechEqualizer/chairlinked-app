@@ -1,11 +1,16 @@
 import React from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { ModernAdminLayout } from '@/components/admin/ModernAdminLayout';
 import { DemoFactoryInterface } from '@/components/admin/demo-factory/DemoFactoryInterface';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 import { Navigate } from 'react-router-dom';
 
 const DemoFactory: React.FC = () => {
   const { isAdmin, user, loading, profile } = useAuthContext();
+
+  // Set page title to reflect Demo Factory focus
+  React.useEffect(() => {
+    document.title = 'Demo Factory - Production Interface | ChairLinked';
+  }, []);
 
   // Debug logging
   console.log('[DemoFactory] Auth state:', {
@@ -57,9 +62,9 @@ const DemoFactory: React.FC = () => {
   }
 
   return (
-    <AdminLayout>
+    <ModernAdminLayout>
       <DemoFactoryInterface />
-    </AdminLayout>
+    </ModernAdminLayout>
   );
 };
 
