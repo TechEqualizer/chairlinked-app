@@ -25,6 +25,9 @@ interface EnhancedFullScreenEditingFlowProps {
   onNavigateToAdmin?: () => void;
   onQuickEdit?: () => void;
   onSaveSuccessNavigate?: () => void;
+  hideDemoFactoryTools?: boolean;
+  isProductionPreview?: boolean;
+  readOnly?: boolean;
 }
 
 const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps> = ({
@@ -37,7 +40,10 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
   isSavingDemo = false,
   onNavigateToAdmin,
   onQuickEdit,
-  onSaveSuccessNavigate
+  onSaveSuccessNavigate,
+  hideDemoFactoryTools = false,
+  isProductionPreview = false,
+  readOnly = false
 }) => {
   const { isEditMode, setIsEditMode } = useEditMode();
   const heroSectionRef = useRef<HTMLDivElement>(null);

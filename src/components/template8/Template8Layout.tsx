@@ -37,6 +37,7 @@ const Template8Layout: React.FC<Template8LayoutProps> = (props) => {
         isChairLinkedMode={props.isChairLinkedMode || false}
         isProductionPreview={isProductionPreview}
         siteType={siteType}
+        readOnly={readOnly}
         pageData={pageData}
         editingState={editingState}
         handleUpdate={handleUpdate}

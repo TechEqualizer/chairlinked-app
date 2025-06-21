@@ -13,6 +13,9 @@ interface ProfessionalInlineEditorProps {
     lifecycle_stage: string;
   };
   onSaveSuccessNavigate?: () => void;
+  hideDemoFactoryTools?: boolean;
+  isProductionPreview?: boolean;
+  readOnly?: boolean;
 }
 
 type ResponsiveMode = 'desktop' | 'tablet' | 'mobile';
@@ -33,7 +36,10 @@ export const ProfessionalInlineEditor: React.FC<ProfessionalInlineEditorProps> =
   onClose,
   isAdmin = false,
   siteData,
-  onSaveSuccessNavigate
+  onSaveSuccessNavigate,
+  hideDemoFactoryTools = false,
+  isProductionPreview = false,
+  readOnly = false
 }) => {
   return (
     <RobustProfessionalEditor
@@ -43,6 +49,9 @@ export const ProfessionalInlineEditor: React.FC<ProfessionalInlineEditorProps> =
       onClose={onClose}
       siteData={siteData}
       onSaveSuccessNavigate={onSaveSuccessNavigate}
+      hideDemoFactoryTools={hideDemoFactoryTools}
+      isProductionPreview={isProductionPreview}
+      readOnly={readOnly}
     />
   );
 };

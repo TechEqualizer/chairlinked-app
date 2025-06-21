@@ -21,6 +21,9 @@ interface RobustProfessionalEditorProps {
     lifecycle_stage: string;
   };
   onSaveSuccessNavigate?: () => void;
+  hideDemoFactoryTools?: boolean;
+  isProductionPreview?: boolean;
+  readOnly?: boolean;
 }
 
 interface SelectedElement {
@@ -47,7 +50,10 @@ const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = (
   onSave,
   onClose,
   siteData,
-  onSaveSuccessNavigate
+  onSaveSuccessNavigate,
+  hideDemoFactoryTools = false,
+  isProductionPreview = false,
+  readOnly = false
 }) => {
   // DISABLED: Use unified sync system - causing infinite loops
   const syncAPI = {
@@ -196,6 +202,9 @@ const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = (
           onUpdate={onUpdate}
           isAdmin={true}
           initiallyVisible={false}
+          hideDemoFactoryTools={hideDemoFactoryTools}
+          isProductionPreview={isProductionPreview}
+          readOnly={readOnly}
         />
       </div>
     );
@@ -388,6 +397,9 @@ const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = (
             onUpdate={onUpdate}
             isAdmin={true}
             initiallyVisible={false}
+            hideDemoFactoryTools={hideDemoFactoryTools}
+            isProductionPreview={isProductionPreview}
+            readOnly={readOnly}
           />
         </div>
       </div>

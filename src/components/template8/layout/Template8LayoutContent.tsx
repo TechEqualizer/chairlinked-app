@@ -20,6 +20,7 @@ interface Template8LayoutContentProps {
   isChairLinkedMode: boolean;
   isProductionPreview: boolean;
   siteType: string;
+  readOnly: boolean;
   pageData: any;
   editingState: any;
   handleUpdate: any;
@@ -38,6 +39,7 @@ export const Template8LayoutContent: React.FC<Template8LayoutContentProps> = ({
   isChairLinkedMode = false,
   isProductionPreview = false,
   siteType = 'demo',
+  readOnly = false,
   pageData,
   editingState,
   handleUpdate,
@@ -174,6 +176,9 @@ export const Template8LayoutContent: React.FC<Template8LayoutContentProps> = ({
               onClose={handleCloseEditing}
               isAdmin={isAdmin}
               onNavigateToAdmin={handleNavigateToAdmin}
+              hideDemoFactoryTools={isProductionPreview || readOnly}
+              isProductionPreview={isProductionPreview}
+              readOnly={readOnly}
             />
           )}
 

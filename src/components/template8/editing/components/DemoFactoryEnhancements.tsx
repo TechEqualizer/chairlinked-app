@@ -22,13 +22,19 @@ interface DemoFactoryEnhancementsProps {
   onUpdate: (updates: any) => void;
   isAdmin?: boolean;
   initiallyVisible?: boolean;
+  hideDemoFactoryTools?: boolean;
+  isProductionPreview?: boolean;
+  readOnly?: boolean;
 }
 
 const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
   sectionData,
   onUpdate,
   isAdmin = false,
-  initiallyVisible = false
+  initiallyVisible = false,
+  hideDemoFactoryTools = false,
+  isProductionPreview = false,
+  readOnly = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(initiallyVisible);
   const { isAuthenticated, loading: authLoading } = useAuthContext();
@@ -492,13 +498,49 @@ const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
     return Math.round((score / total) * 100);
   };
 
-  // Only show Demo Factory Tools in editing contexts, not on live demo sites
-  const isInEditingContext = window.location.pathname.includes('template8-generator') || 
-                            window.location.pathname.includes('admin') ||
-                            window.location.search.includes('mode=');
+  // Enhanced context detection to prevent showing on live demo sites
+  const currentUrl = window.location;
+  const pathname = currentUrl.pathname;
+  const search = currentUrl.search;
+  
+  // Explicit override - if hideDemoFactoryTools is true, never show
+  if (hideDemoFactoryTools) return null;
+  
+  // Don't show if not admin
+  if (!isAdmin) return null;
+  
+  // Don't show in production preview mode (when admins are viewing live sites)
+  if (isProductionPreview) return null;
+  
+  // Don't show in read-only mode
+  if (readOnly) return null;
+  
+  // Check for contexts where we definitely SHOULD NOT show the tools
+  const isLiveDemoSite = pathname.startsWith('/demo/') || 
+                        pathname.match(/^\/[a-zA-Z0-9-]+$/) ||  // matches /:slug pattern
+                        pathname.startsWith('/site/');
+  
+  const isPublicSiteView = !pathname.includes('template8-generator') && 
+                          !pathname.includes('admin') && 
+                          !pathname.includes('editor') &&
+                          !search.includes('mode=edit') &&
+                          !search.includes('mode=advanced') &&
+                          !search.includes('source=demo-factory');
+  
+  // If we're on a live demo site or public site view, don't show
+  if (isLiveDemoSite || isPublicSiteView) return null;
+  
+  // Only show Demo Factory Tools in explicit editing contexts
+  const isInEditingContext = pathname.includes('template8-generator') || 
+                            pathname.includes('admin') ||
+                            pathname.includes('editor') ||
+                            search.includes('mode=edit') ||
+                            search.includes('mode=advanced') ||
+                            search.includes('source=demo-factory') ||
+                            search.includes('skip-form=true');
 
-  // Don't show on live demo pages or if not admin
-  if (!isAdmin || !isInEditingContext) return null;
+  // Final safety check - must be in editing context
+  if (!isInEditingContext) return null;
 
   return (
     <div className="fixed top-4 left-4 z-50">
