@@ -56,17 +56,19 @@ const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
             // Clear the pending save
             sessionStorage.removeItem('pendingDemoSave');
             
-            // Restore the data and trigger the save
-            if (saveData.action === 'saveDraft') {
-              // Update the component data first
-              onUpdate(saveData.data);
-              
-              // Wait a moment for the data to be set, then trigger save
-              setTimeout(() => {
+            // Restore the data and trigger the appropriate save action
+            onUpdate(saveData.data);
+            
+            // Wait a moment for the data to be set, then trigger save
+            setTimeout(() => {
+              if (saveData.action === 'saveDraft') {
                 console.log('[DemoFactoryEnhancements] Automatically resuming draft save...');
                 handleSaveDraft();
-              }, 100);
-            }
+              } else if (saveData.action === 'markReady') {
+                console.log('[DemoFactoryEnhancements] Automatically resuming mark ready...');
+                handleMarkReady();
+              }
+            }, 100);
           } else {
             // Save is too old, clear it
             sessionStorage.removeItem('pendingDemoSave');
@@ -130,118 +132,33 @@ const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
         return;
       }
 
-      // Always verify authentication directly with Supabase before saving
+      // Simplified authentication check using AuthUtils
       console.log('[DemoFactoryEnhancements] Context auth state:', { isAuthenticated, authLoading });
       
-      // Direct Supabase authentication check to ensure client is synchronized
-      const { supabase } = await import('@/integrations/supabase/client');
+      // Use the robust AuthUtils for authentication check
+      const { AuthUtils } = await import('../../generator/services/utils/authUtils');
+      const currentUser = await AuthUtils.getCurrentUser();
       
-      // First try to get the session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('[DemoFactoryEnhancements] Session check first:', {
-        hasSession: !!sessionData.session,
-        sessionError: sessionError?.message
+      if (!currentUser) {
+        console.log('[DemoFactoryEnhancements] Authentication failed - no current user');
+        
+        // Simple auth failure handling
+        if (window.confirm('Please log in to save your demo. Would you like to log in now? (Click Cancel to continue without saving)')) {
+          // Save the current demo data to sessionStorage before redirect
+          sessionStorage.setItem('pendingDemoSave', JSON.stringify({
+            data: sectionData,
+            timestamp: Date.now(),
+            action: 'saveDraft'
+          }));
+          navigate('/auth?returnTo=' + encodeURIComponent(window.location.pathname));
+        }
+        return;
+      }
+      
+      console.log('[DemoFactoryEnhancements] Authentication successful:', {
+        userId: currentUser.id,
+        userEmail: currentUser.email
       });
-      
-      // If no session, try refreshing before checking user
-      if (!sessionData.session) {
-        console.log('[DemoFactoryEnhancements] No session, trying refresh...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshData.session) {
-          console.log('[DemoFactoryEnhancements] Session refreshed successfully');
-        } else {
-          console.log('[DemoFactoryEnhancements] Session refresh failed:', refreshError?.message);
-        }
-      }
-      
-      // Now check for user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      console.log('[DemoFactoryEnhancements] Final auth check:', {
-        hasUser: !!user,
-        userId: user?.id,
-        userEmail: user?.email,
-        authError: authError?.message
-      });
-      
-      if (authError || !user) {
-        console.error('[DemoFactoryEnhancements] Authentication failed - Supabase auth check:', {
-          authError,
-          authErrorMessage: authError?.message,
-          authErrorCode: authError?.code,
-          hasUser: !!user,
-          userDetails: user
-        });
-        
-        // Try to get session directly
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        console.log('[DemoFactoryEnhancements] Session check:', {
-          hasSession: !!sessionData.session,
-          sessionError: sessionError?.message,
-          sessionExpiry: sessionData.session?.expires_at,
-          currentTime: Date.now() / 1000
-        });
-        
-        // If no session, try to restore from storage and refresh
-        if (!sessionData.session) {
-          console.log('[DemoFactoryEnhancements] No session found, attempting recovery...');
-          
-          // Try to refresh the session first
-          try {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            console.log('[DemoFactoryEnhancements] Session refresh attempt:', {
-              hasNewSession: !!refreshData.session,
-              hasNewUser: !!refreshData.user,
-              refreshError: refreshError?.message
-            });
-            
-            if (refreshData.session && refreshData.user) {
-              console.log('[DemoFactoryEnhancements] Session successfully refreshed, retrying save...');
-              // Session refreshed successfully, we can proceed with the save
-              // Don't return here, let the function continue with the save logic
-            } else {
-              throw new Error('Session refresh failed');
-            }
-          } catch (refreshErr) {
-            console.error('[DemoFactoryEnhancements] Session refresh failed:', refreshErr);
-            
-            // As a last resort, check if AuthProvider can help
-            if (window.confirm('Your session has expired. Would you like to log in again to save your demo? (Click Cancel to continue without saving)')) {
-              // Save the current demo data to sessionStorage before redirect
-              sessionStorage.setItem('pendingDemoSave', JSON.stringify({
-                data: sectionData,
-                timestamp: Date.now(),
-                action: 'saveDraft'
-              }));
-              navigate('/auth?returnTo=' + encodeURIComponent(window.location.pathname));
-            }
-            return;
-          }
-        } else {
-          // Session exists but auth check failed - this shouldn't happen
-          console.error('[DemoFactoryEnhancements] Session exists but auth check failed - this is unexpected');
-          if (window.alert) {
-            window.alert('Authentication error. Please refresh the page and try again.');
-          }
-          return;
-        }
-      }
-      
-      // Force refresh the session to ensure it's valid
-      try {
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        console.log('[DemoFactoryEnhancements] Session refresh result:', {
-          hasSession: !!refreshData.session,
-          hasUser: !!refreshData.user,
-          refreshError: refreshError?.message
-        });
-        
-        if (refreshError && refreshError.message !== 'Auth session missing!') {
-          console.warn('[DemoFactoryEnhancements] Session refresh warning:', refreshError);
-        }
-      } catch (refreshErr) {
-        console.warn('[DemoFactoryEnhancements] Session refresh failed:', refreshErr);
-      }
 
       // Import the EnhancedDemoSaveService dynamically to avoid circular imports
       console.log('[DemoFactoryEnhancements] About to import EnhancedDemoSaveService...');
@@ -307,52 +224,50 @@ const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
           }
         }
       } else {
-        // Comprehensive error logging
-        console.error('[DemoFactoryEnhancements] Save failed - Full analysis:', {
+        // Improved error handling with clear categorization
+        console.error('[DemoFactoryEnhancements] Save failed:', {
           result,
-          resultType: typeof result,
-          resultConstructor: result?.constructor?.name,
-          resultKeys: result ? Object.keys(result) : 'null',
-          resultValues: result ? Object.entries(result) : 'null',
           error: result?.error,
           requiresAuth: result?.requiresAuth,
-          success: result?.success,
-          isResultTruthy: !!result,
-          isResultObject: typeof result === 'object',
-          isResultNull: result === null
+          success: result?.success
         });
         
-        // Force detailed console output
-        if (result) {
-          console.log('[DemoFactoryEnhancements] Raw result object:', result);
-          console.log('[DemoFactoryEnhancements] Result stringified:', JSON.stringify(result, null, 2));
-        }
+        // Categorize error types for better user messaging
+        let errorMessage = '';
+        let shouldRedirectToAuth = false;
         
-        // Provide more specific error messages
-        let errorMessage = 'Save failed: ';
         if (result?.requiresAuth) {
-          errorMessage = 'Authentication required. Please log in to save your demo.';
+          errorMessage = 'Your session has expired. Please log in again to save your demo.';
+          shouldRedirectToAuth = true;
         } else if (result?.error) {
-          errorMessage += result.error;
-        } else if (result && typeof result === 'object') {
-          // Truncate long JSON for alert display
-          const jsonStr = JSON.stringify(result, null, 2);
-          errorMessage += jsonStr.length > 200 ? 
-            jsonStr.substring(0, 200) + '...' : 
-            jsonStr;
+          if (result.error.includes('permission') || result.error.includes('denied')) {
+            errorMessage = 'Permission denied. You may not have access to edit this demo.';
+          } else if (result.error.includes('validation')) {
+            errorMessage = 'Data validation failed. Please check your demo content and try again.';
+          } else if (result.error.includes('network') || result.error.includes('fetch')) {
+            errorMessage = 'Network error. Please check your connection and try again.';
+          } else {
+            errorMessage = `Save failed: ${result.error}`;
+          }
         } else {
-          errorMessage += `Unexpected result type: ${typeof result}`;
+          errorMessage = 'An unexpected error occurred while saving. Please try again.';
         }
         
-        console.log('[DemoFactoryEnhancements] Final error message:', errorMessage);
+        console.log('[DemoFactoryEnhancements] User-friendly error:', errorMessage);
         
         if (window.alert) {
           window.alert(errorMessage);
         }
         
-        // If authentication is required, navigate to login
-        if (result?.requiresAuth) {
-          navigate('/auth');
+        // Handle authentication redirect
+        if (shouldRedirectToAuth) {
+          // Save current state before redirecting
+          sessionStorage.setItem('pendingDemoSave', JSON.stringify({
+            data: sectionData,
+            timestamp: Date.now(),
+            action: 'saveDraft'
+          }));
+          navigate('/auth?returnTo=' + encodeURIComponent(window.location.pathname));
         }
       }
     } catch (error) {
@@ -373,26 +288,33 @@ const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
         return;
       }
 
-      // Double-check authentication using both context and direct Supabase call
-      if (!isAuthenticated) {
-        console.warn('[DemoFactoryEnhancements] Context shows not authenticated, checking Supabase directly...');
+      // Simplified authentication check using AuthUtils
+      console.log('[DemoFactoryEnhancements] Context auth state:', { isAuthenticated, authLoading });
+      
+      // Use the robust AuthUtils for authentication check
+      const { AuthUtils } = await import('../../generator/services/utils/authUtils');
+      const currentUser = await AuthUtils.getCurrentUser();
+      
+      if (!currentUser) {
+        console.log('[DemoFactoryEnhancements] Authentication failed - no current user');
         
-        // Try direct authentication check as fallback
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error || !user) {
-          console.error('[DemoFactoryEnhancements] Authentication failed:', error);
-          if (window.alert) {
-            window.alert('Authentication required. Please log in to save your demo.');
-          }
-          // Navigate to auth page using React Router
-          navigate('/auth');
-          return;
+        // Simple auth failure handling
+        if (window.confirm('Please log in to mark demo as ready. Would you like to log in now? (Click Cancel to continue without saving)')) {
+          // Save the current demo data to sessionStorage before redirect
+          sessionStorage.setItem('pendingDemoSave', JSON.stringify({
+            data: sectionData,
+            timestamp: Date.now(),
+            action: 'markReady'
+          }));
+          navigate('/auth?returnTo=' + encodeURIComponent(window.location.pathname));
         }
-        
-        console.log('[DemoFactoryEnhancements] Direct auth check passed, user found:', user.id);
+        return;
       }
+      
+      console.log('[DemoFactoryEnhancements] Authentication successful for mark ready:', {
+        userId: currentUser.id,
+        userEmail: currentUser.email
+      });
 
       // Import the EnhancedDemoSaveService dynamically to avoid circular imports
       const { EnhancedDemoSaveService } = await import('../../generator/services/EnhancedDemoSaveService');
@@ -444,36 +366,50 @@ const DemoFactoryEnhancements: React.FC<DemoFactoryEnhancementsProps> = ({
           }
         }
       } else {
+        // Improved error handling with clear categorization
         console.error('[DemoFactoryEnhancements] Failed to mark demo as ready:', {
           result,
-          resultType: typeof result,
-          resultKeys: result ? Object.keys(result) : 'null',
           error: result?.error,
           requiresAuth: result?.requiresAuth,
           success: result?.success
         });
         
-        // Provide more specific error messages
-        let errorMessage = 'Failed to mark demo as ready: ';
+        // Categorize error types for better user messaging
+        let errorMessage = '';
+        let shouldRedirectToAuth = false;
+        
         if (result?.requiresAuth) {
-          errorMessage = 'Authentication required. Please log in to save your demo.';
+          errorMessage = 'Your session has expired. Please log in again to mark demo as ready.';
+          shouldRedirectToAuth = true;
         } else if (result?.error) {
-          errorMessage += result.error;
-        } else if (typeof result === 'object' && result !== null) {
-          errorMessage += JSON.stringify(result);
+          if (result.error.includes('permission') || result.error.includes('denied')) {
+            errorMessage = 'Permission denied. You may not have access to edit this demo.';
+          } else if (result.error.includes('validation')) {
+            errorMessage = 'Data validation failed. Please check your demo content and try again.';
+          } else if (result.error.includes('network') || result.error.includes('fetch')) {
+            errorMessage = 'Network error. Please check your connection and try again.';
+          } else {
+            errorMessage = `Failed to mark demo as ready: ${result.error}`;
+          }
         } else {
-          errorMessage += 'Unknown error occurred';
+          errorMessage = 'An unexpected error occurred while marking demo as ready. Please try again.';
         }
         
-        console.log('[DemoFactoryEnhancements] Error message:', errorMessage);
+        console.log('[DemoFactoryEnhancements] User-friendly error:', errorMessage);
         
         if (window.alert) {
           window.alert(errorMessage);
         }
         
-        // If authentication is required, navigate to login
-        if (result.requiresAuth) {
-          navigate('/auth');
+        // Handle authentication redirect
+        if (shouldRedirectToAuth) {
+          // Save current state before redirecting
+          sessionStorage.setItem('pendingDemoSave', JSON.stringify({
+            data: sectionData,
+            timestamp: Date.now(),
+            action: 'markReady'
+          }));
+          navigate('/auth?returnTo=' + encodeURIComponent(window.location.pathname));
         }
       }
     } catch (error) {

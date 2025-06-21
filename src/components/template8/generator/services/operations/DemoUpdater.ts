@@ -2,6 +2,7 @@
 import type { Template8Data } from '../../types/GeneratorTypes';
 import type { SaveResult } from '../types/SaveServiceTypes';
 import { supabase } from '@/integrations/supabase/client';
+import { generateSiteUrl } from '@/utils/urlGenerator';
 
 export class DemoUpdater {
   static async updateExistingDemo(data: Partial<Template8Data>, demoId: string, userId: string): Promise<SaveResult> {
@@ -18,7 +19,7 @@ export class DemoUpdater {
           updated_at: new Date().toISOString()
         })
         .eq('id', demoId)
-        .eq('user_id', userId)
+        .or(`user_id.eq.${userId},admin_user_id.eq.${userId}`)
         .select()
         .single();
 
@@ -38,7 +39,12 @@ export class DemoUpdater {
         };
       }
 
-      const demoUrl = `/demo/${updatedDemo.site_slug}`;
+      // Generate the proper demo URL using the same utility as DemoCreator
+      const demoUrl = generateSiteUrl({
+        slug: updatedDemo.site_slug,
+        siteType: updatedDemo.site_type as 'demo' | 'live',
+        status: updatedDemo.status as 'draft' | 'published'
+      });
       
       console.log('[DemoUpdater] Update successful, URL:', demoUrl);
       return {
