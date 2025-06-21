@@ -4,9 +4,9 @@ import { editingSections } from "./config/editingSections";
 import { useEditingFlow } from "./hooks/useEditingFlow";
 import { useEditMode } from "@/components/chairlinked/editing/EditModeContext";
 import { useEditingHotkeys } from "./hooks/useEditingHotkeys";
+import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
 // import { useUndoRedo } from "./hooks/useUndoRedo";
 // import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation";
-// import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
 import CompletionScreen from "./components/CompletionScreen";
 import EditingFlowLayout from "./components/EditingFlowLayout";
 import EditingNavigationArea from "./components/EditingNavigationArea";
@@ -58,6 +58,20 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     return () => setIsEditMode(false);
   }, [setIsEditMode]);
 
+  // Session recovery: Warn about unsaved changes on page unload
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const {
     currentSectionIndex,
     swipeDirection,
@@ -84,14 +98,38 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     totalSections: editingSections.length
   });
 
-  // Temporarily disabled enhanced features to fix error
-  // TODO: Re-enable after fixing issues
-  
-  // Mock auto-save state for now
-  const autoSaveState = null;
-  const triggerSave = async () => {};
-  const pauseAutoSave = () => {};
-  const resumeAutoSave = () => {};
+  // Enable unified auto-save system
+  const {
+    autoSaveState,
+    triggerSave,
+    pauseAutoSave,
+    resumeAutoSave,
+    hasUnsavedChanges
+  } = useUnifiedAutoSave(
+    sectionData,
+    sectionData?._demoId,
+    !!sectionData?._demoId,
+    {
+      interval: 15000, // Auto-save every 15 seconds
+      debounceDelay: 2000, // 2 second debounce on changes
+      maxRetries: 3,
+      onSaveSuccess: (result) => {
+        console.log('[EnhancedFullScreenEditingFlow] Auto-save successful:', result);
+        // Update local data with saved demo information
+        if (result.demoId && onUpdate) {
+          const updatedData = {
+            ...sectionData,
+            _demoId: result.demoId,
+            _lastSaved: new Date().toISOString()
+          };
+          onUpdate(updatedData);
+        }
+      },
+      onSaveError: (error) => {
+        console.error('[EnhancedFullScreenEditingFlow] Auto-save failed:', error);
+      }
+    }
+  );
 
   const currentSection = editingSections[currentSectionIndex];
   
@@ -125,45 +163,112 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     }
   }, [currentSectionIndex, handleSectionNavigate]);
 
-  // Enhanced save function with user feedback
+  // Enhanced save function using EnhancedDemoSaveService
   const handleEnhancedSave = async () => {
-    if (onUpdate && sectionData) onUpdate(sectionData);
-    
-    // This is a manual save request - show appropriate feedback
     try {
-      await saveChanges();
+      // Update parent component with current data
+      if (onUpdate && sectionData) {
+        onUpdate(sectionData);
+      }
+
+      console.log('[EnhancedFullScreenEditingFlow] Starting enhanced save with data:', {
+        businessName: sectionData?.businessName,
+        demoId: sectionData?._demoId,
+        hasData: !!sectionData
+      });
+
+      // Use EnhancedDemoSaveService for robust saving
+      const { EnhancedDemoSaveService } = await import('../generator/services/EnhancedDemoSaveService');
       
-      // Show subtle success feedback instead of disruptive alert
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-[100] text-sm';
-      toast.textContent = 'Changes saved ✓';
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.remove();
-      }, 2000);
+      const result = await EnhancedDemoSaveService.saveDemo(sectionData, {
+        existingDemoId: sectionData?._demoId,
+        isEditingExisting: !!sectionData?._demoId,
+        maxRetries: 3
+      });
+
+      if (result.success) {
+        // Update local data with saved demo information
+        const updatedData = {
+          ...sectionData,
+          _demoId: result.demoId,
+          _lastSaved: new Date().toISOString()
+        };
+        
+        if (onUpdate) {
+          onUpdate(updatedData);
+        }
+
+        console.log('[EnhancedFullScreenEditingFlow] Save successful:', result);
+        
+        // Show success feedback with demo ID
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-[100] text-sm';
+        toast.textContent = `✓ Saved successfully${result.demoId ? ` (ID: ${result.demoId})` : ''}`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          toast.remove();
+        }, 3000);
+        
+        // Call onSaveSuccessNavigate if provided
+        if (onSaveSuccessNavigate) {
+          onSaveSuccessNavigate();
+        }
+      } else {
+        throw new Error(result.error || 'Save failed');
+      }
     } catch (error) {
-      console.error('Save failed:', error);
+      console.error('[EnhancedFullScreenEditingFlow] Save failed:', error);
       
-      // Show error feedback
+      // Categorized error handling
+      let errorMessage = 'Save failed';
+      let shouldRetry = false;
+      
+      if (error instanceof Error) {
+        if (error.message.includes('authentication') || error.message.includes('auth')) {
+          errorMessage = 'Please log in to save your changes';
+        } else if (error.message.includes('permission') || error.message.includes('denied')) {
+          errorMessage = 'Permission denied - you may not have access to edit this demo';
+        } else if (error.message.includes('validation')) {
+          errorMessage = 'Please check your content and try again';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error - please check your connection';
+          shouldRetry = true;
+        } else {
+          errorMessage = `Save failed: ${error.message}`;
+          shouldRetry = true;
+        }
+      }
+      
+      // Show error feedback with retry option
       const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-[100] text-sm';
-      toast.textContent = 'Save failed - changes stored locally';
+      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-[100] text-sm max-w-sm';
+      toast.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span>${errorMessage}</span>
+          ${shouldRetry ? '<button class="ml-2 px-2 py-1 bg-red-600 rounded text-xs hover:bg-red-700" onclick="this.closest(\'.fixed\').remove(); document.querySelector(\'[data-save-button]\')?.click();">Retry</button>' : ''}
+        </div>
+      `;
       document.body.appendChild(toast);
       
       setTimeout(() => {
         toast.remove();
-      }, 3000);
+      }, shouldRetry ? 8000 : 5000);
+      
+      // Re-throw for any additional error handling
+      throw error;
     }
   };
 
-  // Mock auto-save control functions
+  // Auto-save control functions
   const handlePauseAutoSave = () => {
     setIsAutoSavePaused(true);
+    pauseAutoSave();
   };
 
   const handleResumeAutoSave = () => {
     setIsAutoSavePaused(false);
+    resumeAutoSave();
   };
 
   const handleComplete = async () => {
@@ -174,6 +279,30 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
   };
 
   const handleCloseEditing = () => {
+    // Check for unsaved changes before closing
+    if (hasUnsavedChanges) {
+      const shouldSave = window.confirm(
+        'You have unsaved changes. Would you like to save before closing?'
+      );
+      
+      if (shouldSave) {
+        handleEnhancedSave().then(() => {
+          setIsEditMode(false);
+          onClose();
+        }).catch((error) => {
+          console.error('Save failed on close:', error);
+          const forceClose = window.confirm(
+            'Save failed. Do you want to close anyway? Your changes will be lost.'
+          );
+          if (forceClose) {
+            setIsEditMode(false);
+            onClose();
+          }
+        });
+        return;
+      }
+    }
+    
     setIsEditMode(false);
     onClose();
   };

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Save, Globe, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Globe, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface EditorHeaderProps {
@@ -14,6 +14,8 @@ interface EditorHeaderProps {
   onSave: () => void;
   onPublish: () => void;
   onRefresh: () => void;
+  saveError?: string | null;
+  lastSaveTime?: Date | null;
 }
 
 export const EditorHeader: React.FC<EditorHeaderProps> = ({
@@ -26,6 +28,8 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   onSave,
   onPublish,
   onRefresh,
+  saveError,
+  lastSaveTime,
 }) => {
   const navigate = useNavigate();
   const isLiveSite = siteType === 'live';
@@ -65,15 +69,35 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
             Refresh
           </Button>
           
+          {/* Enhanced save status indicators */}
           {saving && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-blue-600">
               <Loader2 className="w-4 h-4 animate-spin" />
               Saving...
             </div>
           )}
-          {hasChanges && !saving && (
+          
+          {saveError && !saving && (
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span className="max-w-48 truncate" title={saveError}>
+                Save failed
+              </span>
+            </div>
+          )}
+          
+          {!saving && !saveError && lastSaveTime && !hasChanges && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              <span>
+                Saved {lastSaveTime.toLocaleTimeString()}
+              </span>
+            </div>
+          )}
+          
+          {hasChanges && !saving && !saveError && (
             <div className="text-sm text-orange-600 flex items-center gap-1">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
               Unsaved changes
             </div>
           )}

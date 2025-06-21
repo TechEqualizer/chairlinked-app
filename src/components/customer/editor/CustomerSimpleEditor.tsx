@@ -16,6 +16,8 @@ export const CustomerSimpleEditor: React.FC = () => {
     loading: editorLoading,
     saving,
     hasChanges,
+    saveError,
+    lastSaveTime,
     updateField,
     publishSite,
     saveData
@@ -128,6 +130,8 @@ export const CustomerSimpleEditor: React.FC = () => {
         saving={saving}
         hasChanges={hasChanges}
         claimedSiteLoading={claimedSiteLoading}
+        saveError={saveError}
+        lastSaveTime={lastSaveTime}
         onSave={saveData}
         onPublish={publishSite}
         onRefresh={refreshClaimedSite}

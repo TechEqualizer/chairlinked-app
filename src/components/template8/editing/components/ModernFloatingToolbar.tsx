@@ -155,6 +155,7 @@ const ModernFloatingToolbar: React.FC<ModernFloatingToolbarProps> = ({
                 whileTap={{ scale: 0.95 }}
                 onClick={item.onClick}
                 disabled={item.disabled}
+                data-save-button={item.id === 'save' ? 'true' : undefined}
                 className={`
                   group relative p-2 rounded-xl transition-all duration-200 
                   ${item.variant === 'primary' 

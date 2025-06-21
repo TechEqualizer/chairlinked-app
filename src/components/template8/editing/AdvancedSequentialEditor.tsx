@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, CheckCircle, Save, Eye, Palette, Type, Image, Layout, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChairLinkedRenderer from '@/components/chairlinked/ChairLinkedRenderer';
+import { ManualSaveButton } from './components/ManualSaveButton';
 
 // Import advanced section editors (we'll create these)
 import { AdvancedHeroEditor } from './advanced/AdvancedHeroEditor';
@@ -106,7 +107,6 @@ export const AdvancedSequentialEditor: React.FC<AdvancedSequentialEditorProps> =
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [sectionData, setSectionData] = useState(pageData || {});
   const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
-  const [isSaving, setIsSaving] = useState(false);
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -159,19 +159,6 @@ export const AdvancedSequentialEditor: React.FC<AdvancedSequentialEditorProps> =
     }
   };
 
-  const handleFinish = async () => {
-    setIsSaving(true);
-    try {
-      if (onSave) {
-        await onSave();
-      }
-      onClose();
-    } catch (error) {
-      console.error('Save failed:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const getPanelIcon = (panel: string) => {
     switch (panel) {
@@ -401,14 +388,15 @@ export const AdvancedSequentialEditor: React.FC<AdvancedSequentialEditorProps> =
                 <ArrowRight className="w-4 h-4" />
               </Button>
             ) : (
-              <Button
-                onClick={handleFinish}
-                disabled={isSaving}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Finish & Save'}
-              </Button>
+              <ManualSaveButton
+                onSave={onSave || (() => Promise.resolve())}
+                pageData={sectionData}
+                isDirty={true}
+                isAutoSaving={false}
+                className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                onSaveSuccessNavigate={onClose}
+                skipNavigationOnSave={false}
+              />
             )}
           </div>
         </div>

@@ -46,22 +46,56 @@ export const useEditingFlow = ({
       hasData: !!sectionData
     });
 
-    if (onSave) {
-      setIsSaving(true);
-      try {
-        // Ensure onUpdate is called with the current section data before saving
-        if (onUpdate && sectionData) {
-          console.log('[useEditingFlow] Updating parent with current section data before save');
-          onUpdate(sectionData);
-        }
-        
-        await onSave();
-        console.log('✅ Changes saved successfully');
-      } catch (error) {
-        console.error('❌ Error saving changes:', error);
-      } finally {
-        setIsSaving(false);
+    setIsSaving(true);
+    try {
+      // Ensure onUpdate is called with the current section data before saving
+      if (onUpdate && sectionData) {
+        console.log('[useEditingFlow] Updating parent with current section data before save');
+        onUpdate(sectionData);
       }
+      
+      // If onSave is provided, use it (for backward compatibility)
+      if (onSave) {
+        await onSave();
+        console.log('✅ Changes saved successfully via onSave prop');
+      } else if (sectionData) {
+        // Use EnhancedDemoSaveService as fallback when no onSave prop provided
+        console.log('[useEditingFlow] Using EnhancedDemoSaveService for save operation');
+        
+        const { EnhancedDemoSaveService } = await import('../generator/services/EnhancedDemoSaveService');
+        
+        const result = await EnhancedDemoSaveService.saveDemo(sectionData, {
+          existingDemoId: sectionData._demoId,
+          isEditingExisting: !!sectionData._demoId,
+          maxRetries: 2
+        });
+
+        if (result.success) {
+          // Update section data with saved demo information
+          const updatedData = {
+            ...sectionData,
+            _demoId: result.demoId,
+            _lastSaved: new Date().toISOString()
+          };
+          
+          setSectionData(updatedData);
+          
+          if (onUpdate) {
+            onUpdate(updatedData);
+          }
+          
+          console.log('✅ Changes saved successfully via EnhancedDemoSaveService:', result);
+        } else {
+          throw new Error(result.error || 'Save operation failed');
+        }
+      } else {
+        console.warn('[useEditingFlow] No save method available and no section data');
+      }
+    } catch (error) {
+      console.error('❌ Error saving changes:', error);
+      throw error; // Re-throw for handling by calling components
+    } finally {
+      setIsSaving(false);
     }
   }, [onSave, onUpdate, sectionData]);
 

@@ -4,7 +4,62 @@ import { useToast } from '@/hooks/use-toast';
 import { SiteWithLifecycle } from '@/types/siteLifecycle';
 import { SimpleEditorData } from './types';
 import { loadSiteData } from './dataLoader';
-import { saveSiteData, publishSite as publishSiteService } from './dataSaver';
+import { publishSite as publishSiteService } from './dataSaver';
+import { EnhancedDemoSaveService } from '@/components/template8/generator/services/EnhancedDemoSaveService';
+import type { Template8Data } from '@/components/template8/generator/types/GeneratorTypes';
+
+// Transform SimpleEditorData to Template8Data for EnhancedDemoSaveService
+const transformToTemplate8Data = (data: SimpleEditorData, claimedSite: SiteWithLifecycle | null): Template8Data => {
+  return {
+    businessName: data.businessName,
+    headline: data.headline,
+    subheadline: data.subheadline,
+    tagline: data.tagline,
+    description: data.description,
+    heroImage: data.heroImageUrl,
+    brandColor: data.primaryColor,
+    ctaText: data.ctaText,
+    contactEmail: data.email,
+    phoneNumber: data.phone,
+    bookingLink: data.bookingUrl,
+    instagramHandle: data.socialLinks?.instagram,
+    
+    // Transform services
+    services: data.services?.map((service, index) => ({
+      title: service,
+      description: data.specialties?.[index] || '',
+      price: ''
+    })) || [],
+    
+    // Transform testimonials
+    testimonials: data.testimonials?.map((testimonial, index) => ({
+      id: index + 1,
+      name: testimonial.name,
+      content: testimonial.text,
+      rating: testimonial.rating,
+      avatar: testimonial.avatarUrl,
+      role: testimonial.service,
+      featured: index === 0
+    })) || [],
+    
+    // Transform gallery images
+    images: data.gallery?.map((item, index) => ({
+      id: index + 1,
+      image: item.url,
+      likes: 0,
+      comments: 0,
+      caption: item.title || item.description || '',
+      user: data.businessName,
+      category: 'work'
+    })) || [],
+    
+    // Add demo tracking fields
+    _demoId: claimedSite?.id,
+    _isEditingExisting: true,
+    _businessName: data.businessName,
+    _lastUpdateTimestamp: Date.now()
+  };
+};
 
 export const useSimpleCustomerEditor = (claimedSite: SiteWithLifecycle | null) => {
   const { toast } = useToast();
@@ -32,6 +87,8 @@ export const useSimpleCustomerEditor = (claimedSite: SiteWithLifecycle | null) =
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
 
   // Load data when claimedSite becomes available
   useEffect(() => {
@@ -88,24 +145,66 @@ export const useSimpleCustomerEditor = (claimedSite: SiteWithLifecycle | null) =
     loadDataEffect();
   }, [claimedSite?.id, toast]);
 
-  // Auto-save with debouncing
+  // Enhanced save with EnhancedDemoSaveService
   const saveData = useCallback(async () => {
     if (!claimedSite?.id || !hasChanges) return;
 
     setSaving(true);
+    setSaveError(null); // Clear previous errors
     try {
-      console.log('[useSimpleCustomerEditor] Saving data for site:', claimedSite.id);
-      await saveSiteData(data, claimedSite);
-      setHasChanges(false);
-      toast({
-        title: "Saved",
-        description: "Your changes have been saved automatically",
+      console.log('[useSimpleCustomerEditor] Saving data for site using EnhancedDemoSaveService:', claimedSite.id);
+      
+      // Transform data to Template8Data format
+      const template8Data = transformToTemplate8Data(data, claimedSite);
+      
+      // Use EnhancedDemoSaveService with existing site ID
+      const result = await EnhancedDemoSaveService.saveDemo(template8Data, {
+        existingDemoId: claimedSite.id,
+        isEditingExisting: true,
+        maxRetries: 2
       });
+
+      if (result.success) {
+        setHasChanges(false);
+        setLastSaveTime(new Date());
+        setSaveError(null);
+        toast({
+          title: "Saved",
+          description: "Your changes have been saved successfully",
+        });
+        console.log('[useSimpleCustomerEditor] Save successful via EnhancedDemoSaveService');
+      } else {
+        // Enhanced error handling
+        console.error('[useSimpleCustomerEditor] Enhanced save failed:', result.error);
+        
+        let errorTitle = "Save Error";
+        let errorDescription = result.error || "Failed to save changes";
+        
+        if (result.requiresAuth) {
+          errorTitle = "Authentication Required";
+          errorDescription = "Please log in to save your changes";
+        } else if (result.error?.includes('validation')) {
+          errorTitle = "Data Validation Error";
+          errorDescription = "Please check your input and try again";
+        } else if (result.error?.includes('permission')) {
+          errorTitle = "Permission Denied";
+          errorDescription = "You don't have permission to edit this site";
+        }
+        
+        setSaveError(errorDescription);
+        toast({
+          title: errorTitle,
+          description: errorDescription,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error('[useSimpleCustomerEditor] Error saving:', error);
+      console.error('[useSimpleCustomerEditor] Unexpected error during save:', error);
+      const errorMessage = "An unexpected error occurred while saving. Please try again.";
+      setSaveError(errorMessage);
       toast({
-        title: "Save Error",
-        description: "Failed to save changes",
+        title: "Unexpected Error",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -136,12 +235,26 @@ export const useSimpleCustomerEditor = (claimedSite: SiteWithLifecycle | null) =
     setSaving(true);
     try {
       console.log('[useSimpleCustomerEditor] Publishing site:', claimedSite.id);
-      // Save first, then publish
+      
+      // Save first using EnhancedDemoSaveService if there are changes
       if (hasChanges) {
-        await saveSiteData(data, claimedSite);
+        console.log('[useSimpleCustomerEditor] Saving changes before publish');
+        const template8Data = transformToTemplate8Data(data, claimedSite);
+        
+        const saveResult = await EnhancedDemoSaveService.saveDemo(template8Data, {
+          existingDemoId: claimedSite.id,
+          isEditingExisting: true,
+          maxRetries: 2
+        });
+
+        if (!saveResult.success) {
+          throw new Error(saveResult.error || 'Failed to save changes before publish');
+        }
+        
         setHasChanges(false);
       }
 
+      // Then publish
       await publishSiteService(claimedSite);
 
       toast({
@@ -150,9 +263,25 @@ export const useSimpleCustomerEditor = (claimedSite: SiteWithLifecycle | null) =
       });
     } catch (error) {
       console.error('[useSimpleCustomerEditor] Error publishing:', error);
+      
+      let errorTitle = "Publish Error";
+      let errorDescription = "Failed to publish site";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('save')) {
+          errorTitle = "Save Error";
+          errorDescription = "Failed to save changes before publishing";
+        } else if (error.message.includes('permission')) {
+          errorTitle = "Permission Denied";
+          errorDescription = "You don't have permission to publish this site";
+        } else {
+          errorDescription = error.message;
+        }
+      }
+      
       toast({
-        title: "Publish Error",
-        description: "Failed to publish site",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {
@@ -165,6 +294,8 @@ export const useSimpleCustomerEditor = (claimedSite: SiteWithLifecycle | null) =
     loading,
     saving,
     hasChanges,
+    saveError,
+    lastSaveTime,
     updateField,
     publishSite,
     saveData
