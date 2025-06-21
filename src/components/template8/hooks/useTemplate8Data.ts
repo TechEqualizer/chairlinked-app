@@ -50,6 +50,11 @@ export interface Template8Data {
   instagramHandle?: string;
   ctaText?: string;
   _heroImageExplicitlySet?: boolean; // Track if user has made explicit choice
+  // Before/After section properties
+  beforeImage?: string;
+  afterImage?: string;
+  beforeLabel?: string;
+  afterLabel?: string;
 }
 
 export const useTemplate8Data = (businessName: string, initialData?: Partial<Template8Data>) => {

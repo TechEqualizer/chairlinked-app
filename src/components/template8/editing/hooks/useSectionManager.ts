@@ -9,8 +9,8 @@ interface SectionConfig {
 export const useSectionManager = (pageData: any) => {
   const sectionConfig: SectionConfig = useMemo(() => {
     return pageData?.sectionConfig || {
-      visibleSections: ['navbar', 'hero', 'stories', 'gallery', 'testimonials', 'booking', 'footer'],
-      sectionOrder: ['navbar', 'hero', 'stories', 'gallery', 'testimonials', 'booking', 'footer']
+      visibleSections: ['navbar', 'hero', 'stories', 'gallery', 'testimonials', 'beforeAfter', 'booking', 'footer'],
+      sectionOrder: ['navbar', 'hero', 'stories', 'gallery', 'testimonials', 'beforeAfter', 'booking', 'footer']
     };
   }, [pageData?.sectionConfig]);
 

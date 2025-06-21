@@ -12,6 +12,7 @@ interface ProfessionalInlineEditorProps {
     business_name: string;
     lifecycle_stage: string;
   };
+  onSaveSuccessNavigate?: () => void;
 }
 
 type ResponsiveMode = 'desktop' | 'tablet' | 'mobile';
@@ -31,7 +32,8 @@ export const ProfessionalInlineEditor: React.FC<ProfessionalInlineEditorProps> =
   onSave,
   onClose,
   isAdmin = false,
-  siteData
+  siteData,
+  onSaveSuccessNavigate
 }) => {
   return (
     <RobustProfessionalEditor
@@ -40,6 +42,7 @@ export const ProfessionalInlineEditor: React.FC<ProfessionalInlineEditorProps> =
       onSave={onSave}
       onClose={onClose}
       siteData={siteData}
+      onSaveSuccessNavigate={onSaveSuccessNavigate}
     />
   );
 };

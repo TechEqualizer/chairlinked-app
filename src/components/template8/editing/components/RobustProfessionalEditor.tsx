@@ -1,8 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save, Eye, EyeOff, Monitor, Tablet, Smartphone, Undo2, Redo2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, EyeOff, Monitor, Tablet, Smartphone, Undo2, Redo2, Globe, Edit3, Maximize2, Zap } from 'lucide-react';
 import RobustVisualEditor from './RobustVisualEditor';
-import RobustSidebar from './RobustSidebar';
+import QuickEditSidebar from './QuickEditSidebar';
+import { Template8SectionRenderer } from '../../layout/Template8SectionRenderer';
+import EnhancedFullScreenEditingFlow from '../EnhancedFullScreenEditingFlow';
+import DemoFactoryEnhancements from './DemoFactoryEnhancements';
+import SitePreviewModal from './SitePreviewModal';
+import { EditorSyncProvider } from '../context/EditorSyncProvider';
+import { useFullscreenEditorSync } from '../hooks/useEditorSync';
 
 interface RobustProfessionalEditorProps {
   pageData: any;
@@ -14,6 +20,7 @@ interface RobustProfessionalEditorProps {
     business_name: string;
     lifecycle_stage: string;
   };
+  onSaveSuccessNavigate?: () => void;
 }
 
 interface SelectedElement {
@@ -24,74 +31,111 @@ interface SelectedElement {
   properties: Record<string, any>;
 }
 
+interface EnhancedSelectedElement extends SelectedElement {
+  sectionId: string;
+  sectionName: string;
+  elementRole: string;
+  dataPath: string;
+}
+
 type ResponsiveMode = 'desktop' | 'tablet' | 'mobile';
 
-const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
+// Internal component that uses the unified sync system
+const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = ({
   pageData,
   onUpdate,
   onSave,
   onClose,
-  siteData
+  siteData,
+  onSaveSuccessNavigate
 }) => {
-  // Core state
-  const [sectionData, setSectionData] = useState(pageData || {});
-  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
+  // DISABLED: Use unified sync system - causing infinite loops
+  const syncAPI = {
+    data: pageData,
+    isAutoSaving: false,
+    hasUnsavedChanges: false,
+    canUndo: false,
+    canRedo: false,
+    syncStatus: 'synced' as const,
+    updateData: (updates: any) => onUpdate(updates),
+    undo: () => false,
+    redo: () => false,
+    save: async () => {
+      if (onSave) await onSave();
+    }
+  }; // Fallback to legacy system
+
+  // Local UI state (not data state - that's handled by syncAPI)
+  const [selectedElement, setSelectedElement] = useState<EnhancedSelectedElement | null>(null);
   const [responsiveMode, setResponsiveMode] = useState<ResponsiveMode>('desktop');
   const [overlaysVisible, setOverlaysVisible] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // Undo/Redo state
-  const [undoStack, setUndoStack] = useState<any[]>([]);
-  const [redoStack, setRedoStack] = useState<any[]>([]);
+  const [previewMode, setPreviewMode] = useState<'editor' | 'live'>('editor');
+  const [editingMode, setEditingMode] = useState<'quick' | 'professional'>('quick');
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  // Handle data updates with undo support
+  // Use syncAPI data as the source of truth
+  const sectionData = syncAPI.data;
+
+  // Handle data updates through unified system
   const handleDataUpdate = useCallback((updates: any) => {
-    setUndoStack(prev => [...prev, sectionData]);
-    setRedoStack([]); // Clear redo stack
-    setSectionData(prev => ({ ...prev, ...updates }));
-    onUpdate({ ...sectionData, ...updates });
-  }, [sectionData, onUpdate]);
+    console.log('[RobustProfessionalEditor] handleDataUpdate called with:', updates);
+    syncAPI.updateData(updates, {
+      source: 'professional-editor',
+      timestamp: Date.now()
+    });
+  }, [syncAPI]);
 
-  // Handle element selection
-  const handleElementSelect = useCallback((element: SelectedElement) => {
+  // Handle element selection with enhanced debugging
+  const handleElementSelect = useCallback((element: EnhancedSelectedElement) => {
+    console.log('[RobustProfessionalEditor] Element selected:', {
+      sectionId: element.sectionId,
+      sectionName: element.sectionName,
+      elementRole: element.elementRole,
+      type: element.type,
+      dataPath: element.dataPath,
+      element: element.element.tagName,
+      className: element.element.className
+    });
+    
     setSelectedElement(element);
   }, []);
 
-  // Undo functionality
+  // Undo/Redo through unified system
   const handleUndo = useCallback(() => {
-    if (undoStack.length > 0) {
-      const previousState = undoStack[undoStack.length - 1];
-      setRedoStack(prev => [sectionData, ...prev]);
-      setUndoStack(prev => prev.slice(0, -1));
-      setSectionData(previousState);
-      onUpdate(previousState);
-    }
-  }, [undoStack, sectionData, onUpdate]);
+    const success = syncAPI.undo();
+    console.log('[RobustProfessionalEditor] Undo result:', success);
+  }, [syncAPI]);
 
-  // Redo functionality
   const handleRedo = useCallback(() => {
-    if (redoStack.length > 0) {
-      const nextState = redoStack[0];
-      setUndoStack(prev => [...prev, sectionData]);
-      setRedoStack(prev => prev.slice(1));
-      setSectionData(nextState);
-      onUpdate(nextState);
-    }
-  }, [redoStack, sectionData, onUpdate]);
+    const success = syncAPI.redo();
+    console.log('[RobustProfessionalEditor] Redo result:', success);
+  }, [syncAPI]);
 
-  // Save functionality
+  // Save functionality through unified system
   const handleSave = async () => {
-    setIsSaving(true);
     try {
-      if (onSave) {
-        await onSave();
+      await syncAPI.save();
+      // Call navigation callback after successful save if provided
+      if (onSaveSuccessNavigate) {
+        onSaveSuccessNavigate();
       }
     } catch (error) {
       console.error('Save failed:', error);
-    } finally {
-      setIsSaving(false);
     }
   };
+
+  // Mode switching
+  const handleSwitchToProfessional = useCallback(() => {
+    setEditingMode('professional');
+  }, []);
+
+  const handleReturnToQuickEdit = useCallback(() => {
+    setEditingMode('quick');
+  }, []);
+
+  const handlePreview = useCallback(() => {
+    setShowPreviewModal(true);
+  }, []);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -134,9 +178,32 @@ const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
     }
   };
 
+  // Render fullscreen professional editor with demo factory enhancements
+  if (editingMode === 'professional') {
+    return (
+      <div className="relative">
+        <EnhancedFullScreenEditingFlow
+          pageData={sectionData}
+          onUpdate={onUpdate}
+          onSave={onSave}
+          onClose={handleReturnToQuickEdit}
+          onQuickEdit={handleReturnToQuickEdit}
+          isAdmin={true}
+          onSaveSuccessNavigate={onSaveSuccessNavigate}
+        />
+        <DemoFactoryEnhancements
+          sectionData={sectionData}
+          onUpdate={onUpdate}
+          isAdmin={true}
+          initiallyVisible={false}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
-      {/* Professional Header */}
+      {/* Enhanced Professional Header */}
       <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between text-white">
         <div className="flex items-center gap-4">
           <Button 
@@ -152,11 +219,41 @@ const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full"></div>
             <span className="text-sm font-medium">{siteData?.business_name}</span>
-            <span className="text-xs text-gray-400">• Professional Editor</span>
+            <span className="text-xs text-gray-400">• Quick Edit Mode</span>
           </div>
+
+          {/* Professional Mode Button */}
+          <Button
+            onClick={handleSwitchToProfessional}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 h-7"
+          >
+            <Maximize2 className="w-3 h-3 mr-1" />
+            Professional Editor
+          </Button>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Preview Mode Toggle */}
+          <div className="flex items-center bg-gray-700 rounded-lg p-1">
+            {[
+              { mode: 'editor', icon: Edit3, label: 'Editor Preview' },
+              { mode: 'live', icon: Globe, label: 'Live Preview' }
+            ].map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setPreviewMode(mode as 'editor' | 'live')}
+                className={`p-2 rounded transition-colors ${
+                  previewMode === mode
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                }`}
+                title={label}
+              >
+                <Icon className="w-4 h-4" />
+              </button>
+            ))}
+          </div>
+
           {/* Responsive Mode Switcher */}
           <div className="flex items-center bg-gray-700 rounded-lg p-1">
             {([
@@ -185,7 +282,7 @@ const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleUndo}
-              disabled={undoStack.length === 0}
+              disabled={!syncAPI.canUndo}
               className="text-gray-300 hover:text-white hover:bg-gray-700 disabled:opacity-50"
               title="Undo (Ctrl+Z)"
             >
@@ -196,7 +293,7 @@ const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleRedo}
-              disabled={redoStack.length === 0}
+              disabled={!syncAPI.canRedo}
               className="text-gray-300 hover:text-white hover:bg-gray-700 disabled:opacity-50"
               title="Redo (Ctrl+Shift+Z)"
             >
@@ -214,13 +311,23 @@ const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
             </Button>
 
             <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePreview}
+              className="text-gray-300 hover:text-white hover:bg-gray-700"
+              title="Preview Site"
+            >
+              <Monitor className="w-4 h-4" />
+            </Button>
+
+            <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={syncAPI.isAutoSaving}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Save className="w-4 h-4 mr-2" />
-              {isSaving ? 'Saving...' : 'Save'}
+              {syncAPI.isAutoSaving ? 'Saving...' : syncAPI.hasUnsavedChanges ? 'Save Changes' : 'Saved'}
             </Button>
           </div>
         </div>
@@ -236,47 +343,131 @@ const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = ({
               className="min-h-full bg-white transition-all duration-300"
               style={responsiveMode === 'desktop' ? {} : getFrameStyles()}
             >
-              <RobustVisualEditor
-                sectionData={sectionData}
-                onElementSelect={handleElementSelect}
-                overlaysVisible={overlaysVisible}
-              />
+              {previewMode === 'editor' ? (
+                <RobustVisualEditor
+                  sectionData={sectionData}
+                  onElementSelect={handleElementSelect}
+                  overlaysVisible={overlaysVisible}
+                />
+              ) : (
+                <div className="relative h-full">
+                  {/* Live Preview using Template8SectionRenderer */}
+                  <Template8SectionRenderer
+                    pageData={pageData}
+                    onUpdate={onUpdate}
+                    isProductionPreview={true}
+                    siteType="demo"
+                    visibleSections={['hero', 'gallery', 'testimonials', 'booking', 'footer']}
+                  />
+                  {/* Overlay to show this is live preview */}
+                  <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-2 rounded text-sm z-50">
+                    🌐 Live Preview Mode
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Fixed Sidebar */}
-        <div className="absolute top-0 right-0 bottom-0 w-96 bg-gray-800 border-l border-gray-700 z-10">
-          <RobustSidebar
+        {/* Unified Quick Edit Sidebar */}
+        <div className="absolute top-0 right-0 bottom-0 w-80 bg-gray-800 border-l border-gray-700 z-10">
+          <QuickEditSidebar
             selectedElement={selectedElement}
             sectionData={sectionData}
             onDataUpdate={handleDataUpdate}
+            onSwitchToProfessional={handleSwitchToProfessional}
+            onSave={onSave}
+            legacyMode={true}
+          />
+        </div>
+
+        {/* Demo Factory Tools for Quick Edit Mode */}
+        <div className="absolute top-4 left-4 z-20">
+          <DemoFactoryEnhancements
+            sectionData={sectionData}
+            onUpdate={onUpdate}
+            isAdmin={true}
+            initiallyVisible={false}
           />
         </div>
       </div>
 
-      {/* Status Bar */}
+      {/* Enhanced Status Bar with Sync Status */}
       <div className="bg-gray-800 border-t border-gray-700 px-4 py-2 text-xs text-gray-400 flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <span className="text-green-400 font-medium">
+            ⚡ Unified Quick Edit Mode
+          </span>
+          <span>•</span>
           <span>
-            {selectedElement ? `Selected: ${selectedElement.type}` : 'No selection'}
+            {selectedElement ? `Editing: ${selectedElement.elementRole || selectedElement.type}` : 'Click any element to edit'}
           </span>
           <span>•</span>
           <span className="capitalize">{responsiveMode} view</span>
           <span>•</span>
-          <span>Overlays {overlaysVisible ? 'ON' : 'OFF'}</span>
+          <span className={previewMode === 'live' ? 'text-green-400' : 'text-blue-400'}>
+            {previewMode === 'live' ? '🌐 Live Preview' : '✏️ Editor Preview'}
+          </span>
+          <span>•</span>
+          <span className={`${
+            syncAPI.syncStatus === 'synced' && !syncAPI.hasUnsavedChanges 
+              ? 'text-green-400' 
+              : 'text-yellow-400'
+          }`}>
+            {syncAPI.syncStatus === 'synced' && !syncAPI.hasUnsavedChanges 
+              ? '🔄 Synced' 
+              : '⏳ Syncing...'}
+          </span>
         </div>
         
         <div className="flex items-center gap-4">
-          <span>Undo: {undoStack.length}</span>
+          <Button
+            onClick={handleSwitchToProfessional}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 h-5"
+          >
+            <Maximize2 className="w-3 h-3 mr-1" />
+            Professional Mode
+          </Button>
           <span>•</span>
-          <span>Redo: {redoStack.length}</span>
-          <span>•</span>
-          <span>Ctrl+S to save • Ctrl+Z to undo • Esc to deselect</span>
+          <span>Ctrl+S to save • Ctrl+Z to undo</span>
         </div>
       </div>
+
+      {/* Site Preview Modal */}
+      <SitePreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        siteData={sectionData}
+        previewUrl={sectionData?._previewUrl}
+      />
     </div>
   );
+};
+
+// Main component that wraps the inner component with EditorSyncProvider
+const RobustProfessionalEditor: React.FC<RobustProfessionalEditorProps> = (props) => {
+  // DISABLED: EditorSyncProvider - causing infinite loops
+  return <RobustProfessionalEditorInner {...props} />;
+  
+  // return (
+  //   <EditorSyncProvider
+  //     externalData={props.pageData}
+  //     onDataChange={props.onUpdate}
+  //     autoSave={{
+  //       enabled: true,
+  //       debounceMs: 1000,
+  //       onSave: async (data) => {
+  //         if (props.onSave) await props.onSave();
+  //         props.onUpdate(data);
+  //       }
+  //     }}
+  //     enablePerformanceMonitoring={true}
+  //     conflictResolution="local"
+  //   >
+  //     <RobustProfessionalEditorInner {...props} />
+  //   </EditorSyncProvider>
+  // );
 };
 
 export default RobustProfessionalEditor;

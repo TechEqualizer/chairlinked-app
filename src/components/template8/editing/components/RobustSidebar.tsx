@@ -1,24 +1,29 @@
 import React from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Type, 
-  Palette, 
-  Layout, 
-  Settings, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight
-} from 'lucide-react';
+import { Settings } from 'lucide-react';
+
+// Import section-specific controls
+import HeroSectionControls from './section-controls/HeroSectionControls';
+import GallerySectionControls from './section-controls/GallerySectionControls';
+import TestimonialsSectionControls from './section-controls/TestimonialsSectionControls';
+import GenericSectionControls from './section-controls/GenericSectionControls';
 
 interface RobustSidebarProps {
   selectedElement: any;
   sectionData: any;
   onDataUpdate: (updates: any) => void;
+}
+
+interface EnhancedSelectedElement {
+  id: string;
+  type: string;
+  element: HTMLElement;
+  selector: string;
+  sectionId: string;
+  sectionName: string;
+  elementRole: string;
+  dataPath: string;
+  properties: Record<string, any>;
 }
 
 const RobustSidebar: React.FC<RobustSidebarProps> = ({
@@ -30,7 +35,7 @@ const RobustSidebar: React.FC<RobustSidebarProps> = ({
   const [, forceUpdate] = React.useState({});
   const triggerUpdate = () => forceUpdate({});
   
-  // Handle property changes for selected element
+  // Enhanced property change handler with smart data binding
   const handleElementPropertyChange = (property: string, value: any) => {
     if (!selectedElement?.element) {
       console.log('No selected element to update');
@@ -56,15 +61,6 @@ const RobustSidebar: React.FC<RobustSidebarProps> = ({
             } else {
               element.textContent = value;
             }
-          }
-          
-          // Update section data based on element type and position
-          if (element.tagName === 'H1' || element.classList.contains('hero') || value.includes('Welcome')) {
-            onDataUpdate({ ...sectionData, heroTitle: value });
-          } else if (element.tagName === 'P' && element.closest('[class*="hero"]')) {
-            onDataUpdate({ ...sectionData, heroSubtitle: value });
-          } else if (element.tagName === 'BUTTON') {
-            onDataUpdate({ ...sectionData, heroCtaText: value });
           }
           break;
           
@@ -99,6 +95,22 @@ const RobustSidebar: React.FC<RobustSidebarProps> = ({
         case 'borderRadius':
           element.style.borderRadius = typeof value === 'number' ? `${value}px` : value;
           break;
+
+        case 'src':
+          if (element.tagName === 'IMG') {
+            (element as HTMLImageElement).src = value;
+          }
+          break;
+
+        case 'alt':
+          if (element.tagName === 'IMG') {
+            (element as HTMLImageElement).alt = value;
+          }
+          break;
+
+        case 'border':
+          element.style.border = value;
+          break;
       }
       
       // Update the selected element's properties for UI sync
@@ -116,234 +128,158 @@ const RobustSidebar: React.FC<RobustSidebarProps> = ({
     }
   };
 
+  // Render appropriate section controls based on selected element's section
+  const renderSectionControls = () => {
+    const enhancedElement = selectedElement as EnhancedSelectedElement;
+    
+    if (!enhancedElement.sectionId) {
+      // Fallback to generic controls if section detection failed
+      return (
+        <GenericSectionControls
+          selectedElement={enhancedElement}
+          sectionData={sectionData}
+          onElementPropertyChange={handleElementPropertyChange}
+          onDataUpdate={onDataUpdate}
+        />
+      );
+    }
+
+    switch (enhancedElement.sectionId) {
+      case 'hero':
+        return (
+          <HeroSectionControls
+            selectedElement={enhancedElement}
+            sectionData={sectionData}
+            onElementPropertyChange={handleElementPropertyChange}
+            onDataUpdate={onDataUpdate}
+          />
+        );
+
+      case 'gallery':
+        return (
+          <GallerySectionControls
+            selectedElement={enhancedElement}
+            sectionData={sectionData}
+            onElementPropertyChange={handleElementPropertyChange}
+            onDataUpdate={onDataUpdate}
+          />
+        );
+
+      case 'testimonials':
+        return (
+          <TestimonialsSectionControls
+            selectedElement={enhancedElement}
+            sectionData={sectionData}
+            onElementPropertyChange={handleElementPropertyChange}
+            onDataUpdate={onDataUpdate}
+          />
+        );
+
+      case 'navbar':
+      case 'stories':
+      case 'booking':
+      case 'footer':
+      default:
+        return (
+          <GenericSectionControls
+            selectedElement={enhancedElement}
+            sectionData={sectionData}
+            onElementPropertyChange={handleElementPropertyChange}
+            onDataUpdate={onDataUpdate}
+          />
+        );
+    }
+  };
+
   if (!selectedElement) {
     return (
       <div className="h-full bg-gray-800 text-white p-6">
         <div className="text-center py-12">
           <Settings className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-semibold mb-2">No Element Selected</h3>
-          <p className="text-gray-400 text-sm">Click on any text element to start editing</p>
+          <h3 className="text-lg font-semibold mb-2">Enhanced Click-to-Edit</h3>
+          <p className="text-gray-400 text-sm">Click on any element to start editing:</p>
+          <div className="mt-6 text-xs text-gray-500 space-y-2">
+            <div className="bg-gray-700 p-3 rounded">
+              <p className="text-gray-300 font-medium mb-2">✨ What You Can Edit:</p>
+              <p>📝 Text Elements (titles, paragraphs, buttons)</p>
+              <p>🖼️ Images (hero images, gallery, avatars)</p>
+              <p>🎨 Backgrounds (colors, images, containers)</p>
+              <p>🔘 Buttons & Links (styling, text, colors)</p>
+              <p>📦 Containers & Sections (layout, spacing)</p>
+            </div>
+            <div className="bg-gray-700 p-3 rounded">
+              <p className="text-gray-300 font-medium mb-2">🎯 Smart Section Controls:</p>
+              <p>Hero • Gallery • Testimonials • Navbar</p>
+              <p>Stories • Booking • Footer</p>
+            </div>
+            <p className="text-blue-400 mt-4">👆 Click anywhere on the preview to start!</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  const enhancedElement = selectedElement as EnhancedSelectedElement;
+
   return (
     <div className="h-full bg-gray-800 text-white flex flex-col">
-      {/* Fixed Header */}
+      {/* Fixed Header with Section Context */}
       <div className="p-4 border-b border-gray-700 bg-gray-800 flex-shrink-0">
-        <h3 className="text-lg font-semibold">Edit {selectedElement.type}</h3>
-        <p className="text-xs text-gray-400 mt-1">{selectedElement.selector}</p>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"></div>
+          <h3 className="text-lg font-semibold">
+            {enhancedElement.sectionName || 'Element'} Editor
+          </h3>
+        </div>
+        <p className="text-xs text-gray-400">
+          Section: {enhancedElement.sectionId || 'unknown'} • Role: {enhancedElement.elementRole || 'generic'}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">{enhancedElement.selector}</p>
         
+        {/* Enhanced Debugging Panel */}
+        <div className="mt-3 p-2 bg-gray-700 rounded text-xs space-y-1">
+          <div className="text-gray-300">Debug Info:</div>
+          <div className="text-gray-400">Tag: {enhancedElement.element?.tagName}</div>
+          <div className="text-gray-400">Type: {enhancedElement.type}</div>
+          <div className="text-gray-400">Section: {enhancedElement.sectionId}</div>
+          <div className="text-gray-400">Role: {enhancedElement.elementRole}</div>
+          {enhancedElement.properties?.imageSource && (
+            <div className="text-gray-400">Image: ✓</div>
+          )}
+          {enhancedElement.properties?.textContent && (
+            <div className="text-gray-400">Text: "{enhancedElement.properties.textContent.substring(0, 30)}..."</div>
+          )}
+        </div>
+
         {/* Quick Test Button */}
         <Button
           onClick={() => {
-            console.log('Test button clicked');
-            console.log('Current element:', selectedElement.element);
-            console.log('Current properties:', selectedElement.properties);
+            console.log('🎯 Test button clicked');
+            console.log('Enhanced element data:', enhancedElement);
             
-            // Test direct text change
-            if (selectedElement.element) {
-              selectedElement.element.style.color = 'red';
-              selectedElement.element.textContent = 'TEST CHANGE WORKS!';
-              console.log('Applied test changes');
-              
-              // Scroll the element into view for better UX
-              selectedElement.element.scrollIntoView({ 
+            // Test direct element highlighting
+            if (enhancedElement.element) {
+              enhancedElement.element.style.outline = '3px solid #10B981';
+              enhancedElement.element.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'center' 
               });
+              
+              // Remove highlight after 2 seconds
+              setTimeout(() => {
+                enhancedElement.element.style.outline = '2px solid #EF4444';
+              }, 2000);
             }
           }}
           className="mt-2 bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
         >
-          Test Direct Edit
+          🎯 Highlight & Test
         </Button>
       </div>
 
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        <div>
-          <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-            <Type className="w-4 h-4" />
-            Content
-          </h4>
-          
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-gray-400">Text Content</Label>
-              <Textarea
-                value={selectedElement.properties?.textContent || ''}
-                onChange={(e) => {
-                  console.log('Text input changed to:', e.target.value);
-                  handleElementPropertyChange('textContent', e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  // Allow normal text editing behavior
-                  e.stopPropagation();
-                }}
-                onFocus={(e) => {
-                  e.stopPropagation();
-                }}
-                className="mt-1 bg-gray-700 border-gray-600 text-white resize-none"
-                rows={3}
-                placeholder="Enter text content..."
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                Current length: {(selectedElement.properties?.textContent || '').length} characters
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Typography Section */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-            <Type className="w-4 h-4" />
-            Typography
-          </h4>
-          
-          <div className="space-y-4">
-            {/* Text Alignment */}
-            <div>
-              <Label className="text-xs text-gray-400">Text Alignment</Label>
-              <div className="flex items-center gap-1 mt-1">
-                {[
-                  { value: 'left', icon: AlignLeft },
-                  { value: 'center', icon: AlignCenter },
-                  { value: 'right', icon: AlignRight }
-                ].map(({ value, icon: Icon }) => (
-                  <Button
-                    key={value}
-                    size="sm"
-                    variant={selectedElement.properties?.textAlign === value ? "default" : "ghost"}
-                    onClick={() => handleElementPropertyChange('textAlign', value)}
-                    className="p-2 h-8 w-8"
-                  >
-                    <Icon className="w-3 h-3" />
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Font Size */}
-            <div>
-              <Label className="text-xs text-gray-400">Font Size</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Slider
-                  value={[parseInt(selectedElement.properties?.fontSize?.replace('px', '')) || 16]}
-                  onValueChange={([value]) => {
-                    console.log('Font size slider moved to:', value);
-                    handleElementPropertyChange('fontSize', value);
-                  }}
-                  max={72}
-                  min={8}
-                  step={1}
-                  className="flex-1"
-                />
-                <div className="text-xs text-gray-400 w-12 bg-gray-600 px-2 py-1 rounded">
-                  {parseInt(selectedElement.properties?.fontSize?.replace('px', '')) || 16}px
-                </div>
-              </div>
-            </div>
-
-            {/* Font Weight */}
-            <div>
-              <Label className="text-xs text-gray-400">Font Weight</Label>
-              <Select
-                value={selectedElement.properties?.fontWeight || '400'}
-                onValueChange={(value) => handleElementPropertyChange('fontWeight', value)}
-              >
-                <SelectTrigger className="mt-1 bg-gray-700 border-gray-600 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="300" className="text-white hover:bg-gray-600">Light (300)</SelectItem>
-                  <SelectItem value="400" className="text-white hover:bg-gray-600">Regular (400)</SelectItem>
-                  <SelectItem value="500" className="text-white hover:bg-gray-600">Medium (500)</SelectItem>
-                  <SelectItem value="600" className="text-white hover:bg-gray-600">Semibold (600)</SelectItem>
-                  <SelectItem value="700" className="text-white hover:bg-gray-600">Bold (700)</SelectItem>
-                  <SelectItem value="800" className="text-white hover:bg-gray-600">Extra Bold (800)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Text Color */}
-            <div>
-              <Label className="text-xs text-gray-400">Text Color</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Input
-                  type="color"
-                  value={selectedElement.properties?.color || '#000000'}
-                  onChange={(e) => handleElementPropertyChange('color', e.target.value)}
-                  className="w-12 h-8 p-1 rounded border-gray-600"
-                />
-                <Input
-                  value={selectedElement.properties?.color || '#000000'}
-                  onChange={(e) => handleElementPropertyChange('color', e.target.value)}
-                  className="flex-1 bg-gray-700 border-gray-600 text-white text-xs font-mono"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Layout Section */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-            <Layout className="w-4 h-4" />
-            Layout
-          </h4>
-          
-          <div className="space-y-4">
-            {/* Background Color */}
-            <div>
-              <Label className="text-xs text-gray-400">Background Color</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Input
-                  type="color"
-                  value={selectedElement.properties?.backgroundColor || '#ffffff'}
-                  onChange={(e) => handleElementPropertyChange('backgroundColor', e.target.value)}
-                  className="w-12 h-8 p-1 rounded border-gray-600"
-                />
-                <Input
-                  value={selectedElement.properties?.backgroundColor || '#ffffff'}
-                  onChange={(e) => handleElementPropertyChange('backgroundColor', e.target.value)}
-                  className="flex-1 bg-gray-700 border-gray-600 text-white text-xs font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Padding */}
-            <div>
-              <Label className="text-xs text-gray-400">Padding</Label>
-              <Input
-                value={selectedElement.properties?.padding || ''}
-                onChange={(e) => handleElementPropertyChange('padding', e.target.value)}
-                placeholder="e.g., 16px or 1rem"
-                className="mt-1 bg-gray-700 border-gray-600 text-white text-xs"
-              />
-            </div>
-
-            {/* Border Radius */}
-            <div>
-              <Label className="text-xs text-gray-400">Border Radius</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Slider
-                  value={[parseInt(selectedElement.properties?.borderRadius) || 0]}
-                  onValueChange={([value]) => handleElementPropertyChange('borderRadius', value)}
-                  max={50}
-                  min={0}
-                  step={1}
-                  className="flex-1"
-                />
-                <div className="text-xs text-gray-400 w-12 bg-gray-600 px-2 py-1 rounded">
-                  {parseInt(selectedElement.properties?.borderRadius) || 0}px
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Scrollable Content Section - Dynamic Based on Section */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {renderSectionControls()}
       </div>
     </div>
   );

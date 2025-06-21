@@ -13,9 +13,9 @@ const ProfessionalSectionNavigator: React.FC<ProfessionalSectionNavigatorProps> 
   onSectionClick
 }) => {
   return (
-    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[60]">
-      <div className="bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-2xl shadow-xl p-1.5">
-        <div className="flex items-center gap-1">
+    <div className="fixed top-2 left-1/2 transform -translate-x-1/2 z-[60]">
+      <div className="bg-white/90 backdrop-blur-xl border border-gray-200/30 rounded-2xl shadow-lg p-1">
+        <div className="flex items-center gap-0.5">
           {editingSections.map((section, index) => {
             const isActive = index === currentSectionIndex;
             const isCompleted = index < currentSectionIndex;
@@ -25,9 +25,9 @@ const ProfessionalSectionNavigator: React.FC<ProfessionalSectionNavigatorProps> 
                 key={section.id}
                 onClick={() => onSectionClick(index)}
                 className={`
-                  relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-300
+                  relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium text-xs transition-all duration-300
                   ${isActive 
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' 
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md' 
                     : isCompleted 
                       ? 'bg-green-50 text-green-700 hover:bg-green-100' 
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -38,7 +38,7 @@ const ProfessionalSectionNavigator: React.FC<ProfessionalSectionNavigatorProps> 
               >
                 {/* Icon */}
                 <span className={`
-                  flex items-center justify-center w-6 h-6 rounded-full text-xs
+                  flex items-center justify-center w-4 h-4 rounded-full text-xs
                   ${isActive 
                     ? 'bg-white/20' 
                     : isCompleted 
@@ -49,23 +49,17 @@ const ProfessionalSectionNavigator: React.FC<ProfessionalSectionNavigatorProps> 
                   {isCompleted ? '✓' : section.icon}
                 </span>
                 
-                {/* Label */}
-                <span className="hidden md:inline font-medium">
+                {/* Compact Label */}
+                <span className="hidden lg:inline font-medium text-xs">
                   {section.name}
                 </span>
-                
-                {/* Progress dot */}
-                <span className={`
-                  absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 rounded-full transition-all
-                  ${isActive ? 'bg-blue-500' : isCompleted ? 'bg-green-500' : 'bg-gray-300'}
-                `} />
               </motion.button>
             );
           })}
         </div>
         
-        {/* Progress bar */}
-        <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
+        {/* Minimal Progress bar */}
+        <div className="mt-1 h-0.5 bg-gray-100 rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full"
             initial={{ width: 0 }}

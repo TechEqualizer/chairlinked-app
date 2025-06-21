@@ -105,6 +105,8 @@ function App() {
                   {/* Add the missing admin edit demo route */}
                   <Route path="/admin/edit-demo/:siteId" element={<AdminEditDemo />} />
                   <Route path="/template8-generator" element={<Template8Generator />} />
+                  {/* Direct editor access route */}
+                  <Route path="/editor" element={<Template8Generator />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/dashboard/content-editor" element={<CustomerContentEditor />} />
                   {/* Development bypass route */}

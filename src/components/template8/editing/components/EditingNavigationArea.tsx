@@ -5,6 +5,8 @@ import ModernFloatingToolbar from "./ModernFloatingToolbar";
 import ModernCommandPalette from "./ModernCommandPalette";
 import ProfessionalEditSidebar from "./ProfessionalEditSidebar";
 import { AdminEditingControls } from "./AdminEditingControls";
+import AutoHideNavigation from "./AutoHideNavigation";
+import type { AutoSaveState } from '../hooks/useUnifiedAutoSave';
 
 interface EditingNavigationAreaProps {
   isNavigationHidden: boolean;
@@ -15,8 +17,11 @@ interface EditingNavigationAreaProps {
   handleSectionNavigate: (sectionIndex: number) => void;
   handleEnhancedSave: () => Promise<void>;
   handleCloseEditing: () => void;
+  handlePreview: () => void;
   handlePrevious: () => void;
   handleNext: () => void;
+  onQuickEdit?: () => void;
+  onAIChat?: () => void;
   isSaving: boolean;
   onNavigateToDashboard: () => void;
   canGoPrevious: boolean;
@@ -26,6 +31,17 @@ interface EditingNavigationAreaProps {
   onNavigateToAdmin?: () => void;
   onSaveAsDemo?: () => Promise<void>;
   isSavingDemo?: boolean;
+  // Enhanced auto-save props
+  autoSaveState?: AutoSaveState;
+  onPauseAutoSave?: () => void;
+  onResumeAutoSave?: () => void;
+  isAutoSavePaused?: boolean;
+  // Enhanced undo/redo props
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onSaveSuccessNavigate?: () => void;
 }
 
 const EditingNavigationArea: React.FC<EditingNavigationAreaProps> = ({
@@ -34,8 +50,11 @@ const EditingNavigationArea: React.FC<EditingNavigationAreaProps> = ({
   handleSectionNavigate,
   handleEnhancedSave,
   handleCloseEditing,
+  handlePreview,
   handlePrevious,
   handleNext,
+  onQuickEdit,
+  onAIChat,
   isSaving,
   canGoPrevious,
   canGoNext,
@@ -43,7 +62,16 @@ const EditingNavigationArea: React.FC<EditingNavigationAreaProps> = ({
   sectionData,
   onNavigateToAdmin,
   onSaveAsDemo,
-  isSavingDemo
+  isSavingDemo,
+  autoSaveState,
+  onPauseAutoSave,
+  onResumeAutoSave,
+  isAutoSavePaused,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  onSaveSuccessNavigate
 }) => {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showEditSidebar, setShowEditSidebar] = useState(false);
@@ -73,25 +101,27 @@ const EditingNavigationArea: React.FC<EditingNavigationAreaProps> = ({
 
   return (
     <>
-      {/* Professional Section Navigator */}
-      <ProfessionalSectionNavigator
-        currentSectionIndex={currentSectionIndex}
-        onSectionClick={handleSectionNavigate}
-      />
-
-      {/* Modern Floating Toolbar */}
-      <ModernFloatingToolbar
-        onSave={handleEnhancedSave}
-        onUndo={handlePrevious}
-        onRedo={handleNext}
-        onPreview={handleCloseEditing}
-        onSettings={() => setShowEditSidebar(true)}
-        onCommandPalette={() => setShowCommandPalette(true)}
-        isSaving={isSaving}
-        canUndo={canGoPrevious}
-        canRedo={canGoNext}
-        brandColor={sectionData?.brandColor}
-      />
+      {/* Auto-Hide Bottom Toolbar */}
+      <AutoHideNavigation position="bottom" hideDelay={4000}>
+        <ModernFloatingToolbar
+          onSave={handleEnhancedSave}
+          onUndo={onUndo || (() => {})}
+          onRedo={onRedo || (() => {})}
+          onPreview={handlePreview}
+          onSettings={() => setShowEditSidebar(true)}
+          onCommandPalette={() => setShowCommandPalette(true)}
+          onQuickEdit={onQuickEdit}
+          onAIChat={onAIChat}
+          isSaving={isSaving}
+          canUndo={canUndo || false}
+          canRedo={canRedo || false}
+          brandColor={sectionData?.brandColor}
+          autoSaveState={autoSaveState}
+          onPauseAutoSave={onPauseAutoSave}
+          onResumeAutoSave={onResumeAutoSave}
+          isAutoSavePaused={isAutoSavePaused}
+        />
+      </AutoHideNavigation>
 
       {/* Command Palette */}
       <ModernCommandPalette
@@ -112,7 +142,7 @@ const EditingNavigationArea: React.FC<EditingNavigationAreaProps> = ({
           onSave={handleEnhancedSave}
           pageData={sectionData}
           isAutoSaving={isSaving}
-          onSaveSuccessNavigate={onNavigateToAdmin}
+          onSaveSuccessNavigate={onSaveSuccessNavigate || onNavigateToAdmin}
           onSaveAsDemo={onSaveAsDemo}
           isSavingDemo={isSavingDemo}
         />

@@ -7,14 +7,16 @@ import EditableTemplate8GalleryBlock from "../editableBlocks/EditableTemplate8Ga
 import EditableTemplate8TestimonialsBlock from "../editableBlocks/EditableTemplate8TestimonialsBlock";
 import EditableTemplate8BookingBlock from "../editableBlocks/EditableTemplate8BookingBlock";
 import EditableTemplate8FooterBlock from "../editableBlocks/EditableTemplate8FooterBlock";
+import EditableTemplate8BeforeAfterBlock from "../editableBlocks/EditableTemplate8BeforeAfterBlock";
 
-// Section component mapping - now includes navbar
+// Section component mapping - now includes navbar and beforeAfter
 const SECTION_COMPONENTS = {
   navbar: EditableTemplate8NavbarBlock,
   hero: EditableTemplate8HeroBlock,
   stories: EditableTemplate8StoriesBlock,
   gallery: EditableTemplate8GalleryBlock,
   testimonials: EditableTemplate8TestimonialsBlock,
+  beforeAfter: EditableTemplate8BeforeAfterBlock,
   booking: EditableTemplate8BookingBlock,
 } as const;
 

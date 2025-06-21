@@ -9,6 +9,21 @@ export interface Template8Data {
   heroImages?: string[];
   brandColor?: string;
   fontFamily?: string;
+  // Text styling properties
+  textColor?: string;
+  secondaryTextColor?: string;
+  headingColor?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  // Section-specific color properties for better editor sync
+  heroTitleColor?: string;
+  heroSubtitleColor?: string;
+  storiesTextColor?: string;
+  storiesTitleColor?: string;
+  testimonialsTextColor?: string;
+  testimonialsAuthorColor?: string;
+  galleryTextColor?: string;
+  galleryTitleColor?: string;
   services?: Array<{
     title: string;
     description: string;

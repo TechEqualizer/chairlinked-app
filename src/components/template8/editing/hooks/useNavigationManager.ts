@@ -24,9 +24,15 @@ export const useNavigationManager = (totalSections: number) => {
     }, 300);
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = async (saveChanges?: () => Promise<void>) => {
     if (currentSectionIndex > 0) {
       console.log('⬅️ Moving to previous section...');
+      
+      // Only save changes if saveChanges function is provided (manual saves only)
+      if (saveChanges) {
+        await saveChanges();
+      }
+      
       setSwipeDirection('left');
       
       setTimeout(() => {
@@ -36,12 +42,14 @@ export const useNavigationManager = (totalSections: number) => {
     }
   };
 
-  const jumpToSection = async (sectionIndex: number, saveChanges: () => Promise<void>) => {
+  const jumpToSection = async (sectionIndex: number, saveChanges?: () => Promise<void>) => {
     if (sectionIndex >= 0 && sectionIndex < totalSections && sectionIndex !== currentSectionIndex) {
       console.log(`🎯 Jumping to section ${sectionIndex + 1}...`);
       
-      // Save current changes before jumping
-      await saveChanges();
+      // Only save changes if saveChanges function is provided (manual saves only)
+      if (saveChanges) {
+        await saveChanges();
+      }
       
       // Determine swipe direction for animation
       const direction = sectionIndex > currentSectionIndex ? 'right' : 'left';
