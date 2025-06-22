@@ -18,7 +18,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useQuickEditorSync } from '../hooks/useEditorSync';
-import { useEditorSyncContext } from '../context/EditorSyncProvider';
+// DISABLED: import { useEditorSyncContext } from '../context/EditorSyncProvider';
+import { applyDesignSystemOverride, restoreDesignSystemOverrides } from '../utils/designSystemOverrides';
 
 interface QuickEditSidebarProps {
   selectedElement: any;
@@ -102,7 +103,8 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
   //   }
   // });
 
-  const syncContext = useEditorSyncContext();
+  // DISABLED: EditorSyncContext not available (provider disabled due to infinite loops)
+  // const syncContext = useEditorSyncContext();
 
   // Local state for text inputs with better management
   const [localTextContent, setLocalTextContent] = useState('');
@@ -121,6 +123,11 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     onDataUpdateRef.current = onDataUpdate;
     sectionDataRef.current = sectionData;
   }, [onDataUpdate, sectionData]);
+
+  // Restore design system overrides on component mount
+  useEffect(() => {
+    restoreDesignSystemOverrides();
+  }, []);
 
   // Update local state when selectedElement changes
   useEffect(() => {
@@ -144,6 +151,14 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Enhanced update function that uses either unified system or legacy
   const updateData = useCallback((updates: any, immediate: boolean = false) => {
+    console.log('[QuickEditSidebar] UPDATE DATA CALLED:', {
+      updates,
+      immediate,
+      legacyMode,
+      hasOnDataUpdate: !!onDataUpdateRef.current,
+      updateKeys: Object.keys(updates)
+    });
+    
     // Mark that we have unsaved changes
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
@@ -151,10 +166,13 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     if (legacyMode) {
       // Legacy debounced update
       if (immediate) {
+        console.log('[QuickEditSidebar] Calling onDataUpdate immediately with:', updates);
         onDataUpdateRef.current(updates);
       } else {
         // Use the old debouncing logic
+        console.log('[QuickEditSidebar] Scheduling debounced update with:', updates);
         setTimeout(() => {
+          console.log('[QuickEditSidebar] Executing debounced update with:', updates);
           onDataUpdateRef.current(updates);
         }, 500);
       }
@@ -247,28 +265,59 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           // Map to correct Template8Data property with section-aware logic
           let textDataProperty = ELEMENT_TO_DATA_MAPPING[enhancedElement.elementRole as keyof typeof ELEMENT_TO_DATA_MAPPING];
           
-          // Section-specific text handling for better sync
+          // Enhanced fallback logic for better text mapping
           if (!textDataProperty) {
             const section = enhancedElement.sectionId;
             const role = enhancedElement.elementRole;
             
-            if (section === 'stories') {
+            console.log('[QuickEditSidebar] No direct mapping found, using fallback logic for:', { section, role });
+            
+            // Hero section mappings
+            if (section === 'hero') {
+              if (role.includes('title') || role.includes('heading') || role.includes('h1')) {
+                textDataProperty = 'heroTitle';
+              } else if (role.includes('subtitle') || role.includes('subheading') || role.includes('h2')) {
+                textDataProperty = 'heroSubtitle';
+              } else if (role.includes('tagline') || role.includes('description') || role.includes('p') || role.includes('text')) {
+                textDataProperty = 'tagline'; // This should catch tagline elements including role 'text'
+              } else if (role.includes('cta') || role.includes('button')) {
+                textDataProperty = 'heroCtaText';
+              }
+            }
+            // Stories section mappings  
+            else if (section === 'stories') {
               if (role.includes('text') || role.includes('paragraph')) {
                 textDataProperty = 'storiesText';
               } else if (role.includes('title') || role.includes('heading')) {
                 textDataProperty = 'storiesTitle';
               }
-            } else if (section === 'testimonials') {
+            } 
+            // Testimonials section mappings
+            else if (section === 'testimonials') {
               if (role.includes('text') || role.includes('quote')) {
                 textDataProperty = 'testimonialsText';
               } else if (role.includes('author') || role.includes('name')) {
                 textDataProperty = 'testimonialsAuthor';
               }
-            } else if (section === 'gallery') {
+            } 
+            // Gallery section mappings
+            else if (section === 'gallery') {
               if (role.includes('title')) {
                 textDataProperty = 'galleryTitle';
               } else if (role.includes('caption')) {
                 textDataProperty = 'galleryCaption';
+              }
+            }
+            // Generic fallback based on element characteristics
+            else {
+              if (role.includes('title') || role.includes('heading') || role.includes('h1') || role.includes('h2')) {
+                textDataProperty = 'heroTitle'; // Default to hero title for headings
+              } else if (role.includes('subtitle') || role.includes('subheading')) {
+                textDataProperty = 'heroSubtitle';
+              } else if (role.includes('tagline') || role.includes('description')) {
+                textDataProperty = 'tagline';
+              } else if (role.includes('text') || role.includes('paragraph') || role.includes('p')) {
+                textDataProperty = 'description'; // Default to description for text
               }
             }
           }
@@ -287,11 +336,49 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
               section: enhancedElement.sectionId,
               role: enhancedElement.elementRole 
             });
+            
+            // DIRECT FALLBACK: Try to update common properties directly
+            const role = enhancedElement.elementRole;
+            let fallbackUpdates = null;
+            
+            if (role && (role.includes('tagline') || role.includes('subtitle') || 
+                        (role.includes('hero') && role.includes('p')))) {
+              fallbackUpdates = { 
+                tagline: value,
+                heroSubtitle: value, // Also try heroSubtitle as a backup
+                description: value   // And description as another backup
+              };
+              console.log('[QuickEditSidebar] Using DIRECT FALLBACK for tagline-like element:', fallbackUpdates);
+            } else if (role && (role.includes('title') || role.includes('heading') || role.includes('h1'))) {
+              fallbackUpdates = { 
+                heroTitle: value,
+                businessName: value  // Also try business name
+              };
+              console.log('[QuickEditSidebar] Using DIRECT FALLBACK for title-like element:', fallbackUpdates);
+            } else {
+              // AGGRESSIVE FALLBACK: Update ALL possible text properties to ensure sync
+              fallbackUpdates = { 
+                tagline: value,
+                description: value,
+                heroSubtitle: value,
+                heroTitle: value,
+                businessName: value,
+                // Add timestamp to verify the update actually happened
+                _lastQuickEdit: `${Date.now()}: ${value.substring(0, 20)}`
+              };
+              console.log('[QuickEditSidebar] Using AGGRESSIVE FALLBACK for ANY text element:', fallbackUpdates);
+            }
+            
+            if (fallbackUpdates) {
+              updateData(fallbackUpdates, true); // Immediate update for fallback
+            }
           }
           break;
           
         case 'color':
-          element.style.color = value;
+          // Apply color override using CSS custom properties for design system integration
+          applyDesignSystemOverride(element, 'color', value, enhancedElement);
+          
           // Map to correct color property in Template8Data with section-aware logic
           let colorProperty = COLOR_PROPERTY_MAPPING[enhancedElement.elementRole as keyof typeof COLOR_PROPERTY_MAPPING];
           
@@ -339,20 +426,26 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           break;
           
         case 'fontSize':
-          element.style.fontSize = value;
+          // Apply font size override using design system integration
+          applyDesignSystemOverride(element, 'font-size', value, enhancedElement);
+          
           // Store fontSize in a way that syncs with fullscreen editor
           const fontSizeProperty = `${enhancedElement.elementRole}FontSize`;
           updateData({ [fontSizeProperty]: value }, true);
           break;
           
         case 'fontWeight':
-          element.style.fontWeight = value;
+          // Apply font weight override using design system integration
+          applyDesignSystemOverride(element, 'font-weight', value, enhancedElement);
+          
           const fontWeightProperty = `${enhancedElement.elementRole}FontWeight`;
           updateData({ [fontWeightProperty]: value }, true);
           break;
           
         case 'backgroundColor':
-          element.style.backgroundColor = value;
+          // Apply background color override using design system integration
+          applyDesignSystemOverride(element, 'background-color', value, enhancedElement);
+          
           if (enhancedElement.elementRole === 'cta') {
             updateData({ ctaBackgroundColor: value }, true);
           }
@@ -387,6 +480,18 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Enhanced text input handler with editing state management
   const handleTextInputChange = (value: string) => {
+    console.log('[QuickEditSidebar] TEXT CHANGE DETECTED:', {
+      value,
+      selectedElement: selectedElement ? {
+        id: selectedElement.id,
+        elementRole: selectedElement.elementRole,
+        sectionId: selectedElement.sectionId,
+        type: selectedElement.type,
+        tagName: selectedElement.element?.tagName,
+        className: selectedElement.element?.className
+      } : null
+    });
+    
     setLocalTextContent(value);
     setIsActivelyEditing(true);
     
@@ -552,6 +657,24 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
             >
               <Maximize2 className="w-3 h-3 mr-1" />
               Pro
+            </Button>
+            
+            {/* DEBUG: Test button to verify data flow */}
+            <Button
+              onClick={() => {
+                const testData = { 
+                  tagline: `Test ${Date.now()}`,
+                  heroSubtitle: `Test ${Date.now()}`,
+                  description: `Test ${Date.now()}`
+                };
+                console.log('[QuickEditSidebar] TEST BUTTON: Direct state update with:', testData);
+                updateData(testData, true);
+              }}
+              size="sm"
+              variant="outline"
+              className="text-xs px-2 py-1 h-6 border-yellow-400 text-yellow-600"
+            >
+              Test
             </Button>
           </div>
         </div>
