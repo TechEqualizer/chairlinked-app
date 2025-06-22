@@ -266,7 +266,17 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
       // Apply immediate visual feedback to DOM
       switch (property) {
         case 'textContent':
-          element.textContent = value;
+          // Handle empty values explicitly - hide element completely when empty
+          if (value === '' || value == null) {
+            element.textContent = '';
+            element.style.display = 'none';
+            console.log('[QuickEditSidebar] Empty text detected - hiding element');
+          } else {
+            element.textContent = value;
+            element.style.display = ''; // Restore display if it was hidden
+            console.log('[QuickEditSidebar] Text content set:', value);
+          }
+          
           // Map to correct Template8Data property with section-aware logic
           let textDataProperty = ELEMENT_TO_DATA_MAPPING[enhancedElement.elementRole as keyof typeof ELEMENT_TO_DATA_MAPPING];
           
@@ -311,12 +321,18 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           }
           
           if (textDataProperty) {
-            const updates = { [textDataProperty]: value };
+            // Create updates object with explicit empty string handling
+            const updates = { 
+              [textDataProperty]: value || '', // Ensure empty string, not null/undefined
+              [`${textDataProperty}Hidden`]: value === '' || value == null // Flag for hiding in Fullscreen Editor
+            };
             console.log('[QuickEditSidebar] Text update mapping:', { 
               section: enhancedElement.sectionId,
               role: enhancedElement.elementRole, 
               property: textDataProperty, 
-              value 
+              value,
+              isEmpty: value === '' || value == null,
+              updates
             });
             updateData(updates, immediate);
           } else {
@@ -531,9 +547,17 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     setLocalTextContent(value);
     setIsActivelyEditing(true);
     
-    // Apply immediate visual feedback
+    // Apply immediate visual feedback - hide element if empty
     if (selectedElement?.element) {
-      selectedElement.element.textContent = value;
+      if (value === '' || value == null) {
+        selectedElement.element.textContent = '';
+        selectedElement.element.style.display = 'none';
+        console.log('[QuickEditSidebar] Input empty - hiding element');
+      } else {
+        selectedElement.element.textContent = value;
+        selectedElement.element.style.display = ''; // Restore display
+        console.log('[QuickEditSidebar] Input text set:', value);
+      }
     }
     
     // Use debounced update for data persistence
