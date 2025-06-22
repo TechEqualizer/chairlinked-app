@@ -761,7 +761,10 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
                 <Input
                   type="color"
                   value={enhancedElement.properties?.color || '#000000'}
-                  onChange={(e) => handleQuickEdit('color', e.target.value, true)}
+                  onChange={(e) => {
+                    console.log('🎨 [QuickEditSidebar] Color picker changed to:', e.target.value);
+                    handleQuickEdit('color', e.target.value, true);
+                  }}
                   className="w-12 h-8 p-1 rounded border-gray-600"
                 />
                 <Button
