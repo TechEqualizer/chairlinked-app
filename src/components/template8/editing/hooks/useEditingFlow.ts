@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigationManager } from "./useNavigationManager";
 import { useRegenerationManager } from "./useRegenerationManager";
 import { useHistoryManager } from "./useHistoryManager";
@@ -13,6 +13,21 @@ export const useEditingFlow = ({
   const [sectionData, setSectionData] = useState(pageData);
   const [isEditBarOpen, setIsEditBarOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // CRITICAL FIX: Sync internal state when pageData prop changes
+  // This ensures Quick Editor changes are reflected in Fullscreen Editor
+  useEffect(() => {
+    if (pageData && pageData !== sectionData) {
+      console.log('[useEditingFlow] Syncing with updated pageData from Quick Editor:', {
+        oldBusinessName: sectionData?.businessName,
+        newBusinessName: pageData?.businessName,
+        oldTagline: sectionData?.tagline,
+        newTagline: pageData?.tagline,
+        dataChanged: JSON.stringify(pageData) !== JSON.stringify(sectionData)
+      });
+      setSectionData(pageData);
+    }
+  }, [pageData]);
 
   const {
     currentSectionIndex,

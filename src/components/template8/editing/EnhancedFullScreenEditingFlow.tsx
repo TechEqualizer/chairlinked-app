@@ -4,6 +4,7 @@ import { editingSections } from "./config/editingSections";
 import { useEditingFlow } from "./hooks/useEditingFlow";
 import { useEditMode } from "@/components/chairlinked/editing/EditModeContext";
 import { useEditingHotkeys } from "./hooks/useEditingHotkeys";
+import { restoreDesignSystemOverrides } from "./utils/designSystemOverrides";
 // import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
 // import { useAuthContext } from "@/components/auth/AuthProvider";
 // import { useUndoRedo } from "./hooks/useUndoRedo";
@@ -58,6 +59,11 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     setIsEditMode(true);
     return () => setIsEditMode(false);
   }, [setIsEditMode]);
+
+  // Restore design system overrides from Quick Editor
+  React.useEffect(() => {
+    restoreDesignSystemOverrides();
+  }, []);
 
   // Session recovery temporarily disabled
   // TODO: Re-enable after fixing auto-save system
@@ -200,6 +206,7 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
         admin_user_id: currentUser.id, // Set both for admin-created demos
         site_type: 'demo',
         status: 'draft',
+        lifecycle_stage: 'draft', // Add lifecycle stage for production pipeline
         updated_at: new Date().toISOString()
       };
 
@@ -237,7 +244,8 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
           .from('chairlinked_sites')
           .insert({
             ...saveData,
-            site_slug: slug
+            site_slug: slug,
+            created_at: new Date().toISOString()
           })
           .select()
           .single();

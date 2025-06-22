@@ -8,7 +8,7 @@ interface EditingFlowLayoutProps {
 /** Modern professional layout with sophisticated background and glass morphism effects */
 const EditingFlowLayout: React.FC<EditingFlowLayoutProps> = ({ children }) => (
   <div 
-    className="fixed inset-0 z-[50] overflow-hidden"
+    className="fixed inset-0 z-[50] overflow-hidden quick-edit-container"
     style={{
       background: `
         linear-gradient(135deg, #667eea 0%, #764ba2 100%),

@@ -154,12 +154,13 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Enhanced update function that uses either unified system or legacy
   const updateData = useCallback((updates: any, immediate: boolean = false) => {
-    console.log('[QuickEditSidebar] UPDATE DATA CALLED:', {
+    console.log('💥 [QuickEditSidebar] UPDATE DATA CALLED:', {
       updates,
       immediate,
       legacyMode,
       hasOnDataUpdate: !!onDataUpdateRef.current,
-      updateKeys: Object.keys(updates)
+      updateKeys: Object.keys(updates),
+      onDataUpdateFunction: onDataUpdateRef.current?.toString().substring(0, 100)
     });
     
     // Mark that we have unsaved changes
@@ -169,19 +170,22 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     if (legacyMode) {
       // Legacy debounced update
       if (immediate) {
-        console.log('[QuickEditSidebar] Calling onDataUpdate immediately with:', updates);
-        onDataUpdateRef.current(updates);
+        console.log('⚡ [QuickEditSidebar] Calling onDataUpdate IMMEDIATELY with:', updates);
+        console.log('⚡ [QuickEditSidebar] onDataUpdate function exists?', !!onDataUpdateRef.current);
+        const result = onDataUpdateRef.current(updates);
+        console.log('⚡ [QuickEditSidebar] onDataUpdate result:', result);
       } else {
         // Use the old debouncing logic
-        console.log('[QuickEditSidebar] Scheduling debounced update with:', updates);
+        console.log('⏰ [QuickEditSidebar] Scheduling debounced update with:', updates);
         setTimeout(() => {
-          console.log('[QuickEditSidebar] Executing debounced update with:', updates);
-          onDataUpdateRef.current(updates);
+          console.log('⏰ [QuickEditSidebar] Executing debounced update with:', updates);
+          const result = onDataUpdateRef.current(updates);
+          console.log('⏰ [QuickEditSidebar] Debounced onDataUpdate result:', result);
         }, 500);
       }
     } else if (syncAPI) {
       // Use unified sync system
-      console.log('[QuickEditSidebar] Using unified sync for updates:', updates);
+      console.log('🔄 [QuickEditSidebar] Using unified sync for updates:', updates);
       syncAPI.updateData(updates, {
         immediate,
         source: 'quick-edit-sidebar',
@@ -189,6 +193,7 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
       });
     } else {
       // Fallback to legacy if syncAPI is null
+      console.log('🆘 [QuickEditSidebar] Emergency fallback to onDataUpdate:', updates);
       onDataUpdateRef.current(updates);
     }
   }, [legacyMode, syncAPI]);
@@ -451,7 +456,7 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Enhanced text input handler with editing state management
   const handleTextInputChange = (value: string) => {
-    console.log('[QuickEditSidebar] TEXT CHANGE DETECTED:', {
+    console.log('🔥 [QuickEditSidebar] TEXT CHANGE DETECTED:', {
       value,
       selectedElement: selectedElement ? {
         id: selectedElement.id,
@@ -460,7 +465,13 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
         type: selectedElement.type,
         tagName: selectedElement.element?.tagName,
         className: selectedElement.element?.className
-      } : null
+      } : null,
+      currentSectionData: sectionDataRef.current ? {
+        businessName: sectionDataRef.current.businessName,
+        tagline: sectionDataRef.current.tagline,
+        heroTitle: sectionDataRef.current.heroTitle,
+        heroSubtitle: sectionDataRef.current.heroSubtitle
+      } : 'NO SECTION DATA'
     });
     
     setLocalTextContent(value);
@@ -473,6 +484,14 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     
     // Use debounced update for data persistence
     handleQuickEdit('textContent', value, false);
+    
+    // FORCE IMMEDIATE TEST UPDATE to verify data flow
+    console.log('🚀 [QuickEditSidebar] FORCING IMMEDIATE TEST UPDATE');
+    updateData({ 
+      tagline: value, 
+      _testSync: `${Date.now()}: ${value}`,
+      _immediateUpdate: true 
+    }, true);
   };
 
   // Handle focus events to manage editing state

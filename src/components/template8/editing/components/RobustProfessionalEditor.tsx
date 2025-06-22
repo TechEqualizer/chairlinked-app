@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save, Eye, EyeOff, Monitor, Tablet, Smartphone, Undo2, Redo2, Globe, Edit3, Maximize2, Zap } from 'lucide-react';
 import RobustVisualEditor from './RobustVisualEditor';
@@ -55,22 +55,6 @@ const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = (
   isProductionPreview = false,
   readOnly = false
 }) => {
-  // DISABLED: Use unified sync system - causing infinite loops
-  const syncAPI = {
-    data: pageData,
-    isAutoSaving: false,
-    hasUnsavedChanges: false,
-    canUndo: false,
-    canRedo: false,
-    syncStatus: 'synced' as const,
-    updateData: (updates: any) => onUpdate(updates),
-    undo: () => false,
-    redo: () => false,
-    save: async () => {
-      if (onSave) await onSave();
-    }
-  }; // Fallback to legacy system
-
   // Local UI state (not data state - that's handled by syncAPI)
   const [selectedElement, setSelectedElement] = useState<EnhancedSelectedElement | null>(null);
   const [responsiveMode, setResponsiveMode] = useState<ResponsiveMode>('desktop');
@@ -78,18 +62,85 @@ const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = (
   const [previewMode, setPreviewMode] = useState<'editor' | 'live'>('editor');
   const [editingMode, setEditingMode] = useState<'quick' | 'professional'>('quick');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  
+  // Track data changes locally to ensure sync between Quick and Professional editors
+  const [currentData, setCurrentData] = useState(pageData);
 
-  // Use syncAPI data as the source of truth
-  const sectionData = syncAPI.data;
+  // Update current data when pageData changes
+  useEffect(() => {
+    setCurrentData(pageData);
+  }, [pageData]);
 
   // Handle data updates through unified system
   const handleDataUpdate = useCallback((updates: any) => {
-    console.log('[RobustProfessionalEditor] handleDataUpdate called with:', updates);
-    syncAPI.updateData(updates, {
-      source: 'professional-editor',
-      timestamp: Date.now()
+    console.log('🎯 [RobustProfessionalEditor] handleDataUpdate called with:', {
+      updates,
+      updateKeys: Object.keys(updates),
+      currentDataKeys: Object.keys(currentData),
+      currentTagline: currentData.tagline,
+      updateTagline: updates.tagline,
+      hasOnUpdate: !!onUpdate
     });
-  }, [syncAPI]);
+    
+    // Update local state immediately for Quick/Professional editor sync
+    const newData = {
+      ...currentData,
+      ...updates
+    };
+    setCurrentData(newData);
+    
+    // CRITICAL FIX: Call parent update callback with complete data, not just updates
+    console.log('📤 [RobustProfessionalEditor] Calling parent onUpdate with complete data:', {
+      oldTagline: currentData.tagline,
+      newTagline: newData.tagline,
+      businessName: newData.businessName,
+      dataSize: JSON.stringify(newData).length
+    });
+    onUpdate(newData);
+    
+    // Also update session storage for persistence across page refreshes
+    try {
+      sessionStorage.setItem('session-backup', JSON.stringify(newData));
+      if (newData._demoId) {
+        sessionStorage.setItem('editingDemoSite', JSON.stringify({
+          id: newData._demoId,
+          config: newData,
+          businessName: newData.businessName,
+          isEditingExisting: true
+        }));
+      }
+      console.log('💾 [RobustProfessionalEditor] Session storage updated successfully');
+    } catch (error) {
+      console.warn('❌ [RobustProfessionalEditor] Failed to update session storage:', error);
+    }
+    
+    console.log('✅ [RobustProfessionalEditor] Update complete - new data:', {
+      businessName: newData.businessName,
+      tagline: newData.tagline,
+      heroTitle: newData.heroTitle,
+      _testSync: newData._testSync,
+      _immediateUpdate: newData._immediateUpdate
+    });
+  }, [onUpdate, currentData]);
+
+  // DISABLED: Use unified sync system - causing infinite loops
+  const syncAPI = {
+    data: currentData,
+    isAutoSaving: false,
+    hasUnsavedChanges: false,
+    canUndo: false,
+    canRedo: false,
+    syncStatus: 'synced' as const,
+    updateData: (updates: any) => handleDataUpdate(updates),
+    undo: () => false,
+    redo: () => false,
+    save: async () => {
+      if (onSave) await onSave();
+    }
+  }; // Fallback to legacy system
+
+  // Use current data as the source of truth for both editors
+  const sectionData = currentData;
 
   // Handle element selection with enhanced debugging
   const handleElementSelect = useCallback((element: EnhancedSelectedElement) => {
@@ -211,7 +262,7 @@ const RobustProfessionalEditorInner: React.FC<RobustProfessionalEditorProps> = (
   }
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-900 flex flex-col quick-edit-container">
       {/* Enhanced Professional Header */}
       <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between text-white">
         <div className="flex items-center gap-4">

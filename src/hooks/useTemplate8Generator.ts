@@ -129,10 +129,43 @@ export const useTemplate8Generator = () => {
 
   // Data updates with session backup and validation
   const handleUpdate = (updates: Partial<Template8Data>) => {
+    console.log('🎯 [useTemplate8Generator] handleUpdate called with:', {
+      updates: {
+        businessName: updates.businessName,
+        tagline: updates.tagline,
+        heroTitle: updates.heroTitle,
+        _testSync: updates._testSync,
+        _immediateUpdate: updates._immediateUpdate
+      },
+      currentGeneratedData: generatedData ? {
+        businessName: generatedData.businessName,
+        tagline: generatedData.tagline,
+        heroTitle: generatedData.heroTitle
+      } : 'NO CURRENT DATA',
+      updateKeys: Object.keys(updates)
+    });
+
     const newData = generatedData ? { ...generatedData, ...updates } : updates;
     const cleanedData = DemoIdUtils.cleanInvalidDemoIds(newData);
+    
+    console.log('📝 [useTemplate8Generator] Setting new generatedData:', {
+      oldData: {
+        businessName: generatedData?.businessName,
+        tagline: generatedData?.tagline,
+        heroTitle: generatedData?.heroTitle
+      },
+      newData: {
+        businessName: cleanedData.businessName,
+        tagline: cleanedData.tagline,
+        heroTitle: cleanedData.heroTitle,
+        _testSync: cleanedData._testSync
+      }
+    });
+
     setGeneratedData(cleanedData);
     createSessionBackup(cleanedData, 'update');
+    
+    console.log('✅ [useTemplate8Generator] handleUpdate complete - generatedData updated');
   };
 
   // Save handler
