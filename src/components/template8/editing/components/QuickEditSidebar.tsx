@@ -247,7 +247,17 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Smart property change handler with proper Template8Data mapping
   const handleQuickEdit = (property: string, value: any, immediate: boolean = false) => {
-    if (!selectedElement?.element) return;
+    console.log('🔧 [QuickEditSidebar] handleQuickEdit called with:', {
+      property,
+      value,
+      immediate,
+      hasSelectedElement: !!selectedElement?.element
+    });
+    
+    if (!selectedElement?.element) {
+      console.warn('❌ [QuickEditSidebar] No selected element, aborting handleQuickEdit');
+      return;
+    }
     
     const element = selectedElement.element as HTMLElement;
     const enhancedElement = selectedElement as EnhancedSelectedElement;
@@ -339,6 +349,7 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           break;
           
         case 'color':
+          console.log('🎨 [QuickEditSidebar] COLOR CASE TRIGGERED!');
           // UNIVERSAL COLOR APPLICATION - Works on ANY element regardless of design system
           console.log('[QuickEditSidebar] Applying color to ANY element:', {
             element: element.tagName,
@@ -383,9 +394,20 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
             document.head.appendChild(styleSheet);
           }
           
-          // Add high-specificity rule for this exact element
-          const cssRule = `[data-quick-edit-id="${elementId}"], [data-quick-edit-id="${elementId}"] * { color: ${value} !important; }`;
-          styleSheet.textContent += cssRule + '\n';
+          // Add MULTIPLE high-specificity rules for this exact element
+          const cssRules = [
+            `[data-quick-edit-id="${elementId}"] { color: ${value} !important; }`,
+            `[data-quick-edit-id="${elementId}"] * { color: ${value} !important; }`,
+            `html body [data-quick-edit-id="${elementId}"] { color: ${value} !important; }`,
+            `html body [data-quick-edit-id="${elementId}"] * { color: ${value} !important; }`,
+            // NUCLEAR OPTION: Maximum specificity
+            `html body div [data-quick-edit-id="${elementId}"] { color: ${value} !important; }`,
+            `html body div [data-quick-edit-id="${elementId}"] * { color: ${value} !important; }`
+          ];
+          
+          cssRules.forEach(rule => {
+            styleSheet.textContent += rule + '\n';
+          });
           
           // UNIVERSAL COLOR MAPPING for data model sync
           let colorProperty = COLOR_PROPERTY_MAPPING[enhancedElement.elementRole as keyof typeof COLOR_PROPERTY_MAPPING];
@@ -425,12 +447,22 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
             _universalColorOverride: elementId
           };
           
+          // DEBUG: Check what's overriding our color
+          const computedColor = getComputedStyle(element).color;
+          const inlineColor = element.style.color;
+          
           console.log('[QuickEditSidebar] UNIVERSAL color application complete:', { 
             elementId,
-            cssRule,
+            cssRulesCount: cssRules.length,
             colorProperty,
             value,
-            dataUpdates: colorUpdates
+            dataUpdates: colorUpdates,
+            afterApplication: {
+              computedColor,
+              inlineColor,
+              hasAttribute: element.hasAttribute('data-quick-edit-id'),
+              attributeValue: element.getAttribute('data-quick-edit-id')
+            }
           });
           updateData(colorUpdates, true);
           break;
