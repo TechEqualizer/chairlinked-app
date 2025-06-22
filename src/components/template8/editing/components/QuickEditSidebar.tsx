@@ -68,17 +68,20 @@ const ELEMENT_TO_DATA_MAPPING = {
 const COLOR_PROPERTY_MAPPING = {
   'title': 'heroTitleColor',
   'subtitle': 'heroSubtitleColor',
-  'heading': 'headingColor', 
+  'heading': 'heroTitleColor', // Map to primary title color
   'description': 'textColor',
-  'tagline': 'taglineColor',
-  'story-text': 'storyTextColor',
-  'story-title': 'storyTitleColor',
-  'testimonial-text': 'testimonialTextColor',
+  'tagline': 'textColor', // Map to primary text color for universal sync
+  'text': 'textColor', // Map generic text to primary text color
+  'paragraph': 'textColor', // Map paragraph to primary text color
+  'p': 'textColor', // Map p tag to primary text color
+  'story-text': 'textColor', // Map to primary text color for universal sync
+  'story-title': 'heroTitleColor', // Map to primary title color
+  'testimonial-text': 'textColor', // Map to primary text color for universal sync
   'author': 'testimonialAuthorColor',
-  'gallery-title': 'galleryTitleColor',
-  'caption': 'captionColor',
-  'paragraph': 'textColor',
-  'text': 'textColor'
+  'gallery-title': 'heroTitleColor', // Map to primary title color
+  'caption': 'textColor', // Map to primary text color for universal sync
+  'cta': 'heroCtaColor',
+  'business-name': 'heroTitleColor'
 };
 
 const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
@@ -338,48 +341,62 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           // Apply color override using CSS custom properties for design system integration
           applyDesignSystemOverride(element, 'color', value, enhancedElement);
           
-          // Map to correct color property in Template8Data with section-aware logic
+          // UNIVERSAL COLOR MAPPING - Works across ALL sections like text mapping
           let colorProperty = COLOR_PROPERTY_MAPPING[enhancedElement.elementRole as keyof typeof COLOR_PROPERTY_MAPPING];
           
-          // Section-specific color handling for better sync
           if (!colorProperty) {
             const section = enhancedElement.sectionId;
             const role = enhancedElement.elementRole;
             
-            if (section === 'stories') {
-              if (role.includes('text') || role.includes('paragraph')) {
-                colorProperty = 'storiesTextColor';
-              } else if (role.includes('title') || role.includes('heading')) {
-                colorProperty = 'storiesTitleColor';
-              } else {
-                colorProperty = 'storiesTextColor'; // fallback for stories section
-              }
-            } else if (section === 'testimonials') {
-              if (role.includes('text') || role.includes('quote')) {
-                colorProperty = 'testimonialsTextColor';
-              } else if (role.includes('author') || role.includes('name')) {
-                colorProperty = 'testimonialsAuthorColor';
-              } else {
-                colorProperty = 'testimonialsTextColor';
-              }
-            } else if (section === 'gallery') {
-              colorProperty = 'galleryTextColor';
-            } else {
-              // Generic fallback based on element type
-              if (role.includes('heading') || role.includes('title')) {
-                colorProperty = 'headingColor';
-              } else {
-                colorProperty = 'textColor';
-              }
+            console.log('[QuickEditSidebar] Using UNIVERSAL color mapping for:', { section, role });
+            
+            // Universal role-based color mapping that works regardless of section
+            if (role.includes('title') || role.includes('heading') || role.includes('h1')) {
+              // Priority mapping for titles
+              if (section === 'hero') colorProperty = 'heroTitleColor';
+              else if (section === 'stories') colorProperty = 'storiesTitleColor';
+              else if (section === 'gallery') colorProperty = 'galleryTitleColor';
+              else colorProperty = 'heroTitleColor'; // Default fallback
+            } 
+            else if (role.includes('subtitle') || role.includes('subheading') || role.includes('h2')) {
+              colorProperty = 'heroSubtitleColor';
+            }
+            else if (role.includes('tagline') || role.includes('description') || 
+                     role.includes('text') || role.includes('paragraph') || role.includes('p')) {
+              // ANY text-like element gets mapped to primary text color
+              colorProperty = 'textColor';
+              console.log('[QuickEditSidebar] UNIVERSAL COLOR MAPPING: Any text element → textColor');
+            }
+            else if (role.includes('cta') || role.includes('button')) {
+              colorProperty = 'heroCtaColor';
+            }
+            else if (role.includes('author') || role.includes('name')) {
+              colorProperty = 'testimonialAuthorColor';
+            }
+            else if (role.includes('caption')) {
+              colorProperty = 'captionColor';
+            }
+            else {
+              // ULTIMATE FALLBACK: If we can't identify the role, use primary text color
+              colorProperty = 'textColor';
+              console.log('[QuickEditSidebar] ULTIMATE COLOR FALLBACK: Unknown role → textColor');
             }
           }
           
-          const colorUpdates = { [colorProperty]: value };
+          // DUAL UPDATE: Update both specific property and apply universal color properties
+          const colorUpdates = { 
+            [colorProperty]: value,
+            // Also update primary color properties to ensure sync
+            primaryTextColor: value,
+            _lastColorEdit: `${Date.now()}: ${value}`
+          };
+          
           console.log('[QuickEditSidebar] Color update mapping:', { 
             section: enhancedElement.sectionId,
             role: enhancedElement.elementRole, 
             property: colorProperty, 
-            value 
+            value,
+            allUpdates: colorUpdates
           });
           updateData(colorUpdates, true); // Color changes are immediate
           break;
