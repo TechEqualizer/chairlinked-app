@@ -47,18 +47,21 @@ interface EnhancedSelectedElement {
 const ELEMENT_TO_DATA_MAPPING = {
   'title': 'heroTitle',
   'subtitle': 'heroSubtitle', 
-  'description': 'description',
+  'description': 'tagline', // Map description to tagline for universal sync
   'tagline': 'tagline',
+  'text': 'tagline', // Map generic text to tagline for universal sync
+  'paragraph': 'tagline', // Map paragraph to tagline for universal sync
+  'p': 'tagline', // Map p tag to tagline for universal sync
   'cta': 'heroCtaText',
   'business-name': 'businessName',
-  'heading': 'sectionHeading',
+  'heading': 'heroTitle',
   'hero-image': 'heroImage',
-  'story-text': 'storyText',
-  'story-title': 'storyTitle',
-  'testimonial-text': 'testimonialText',
-  'author': 'testimonialAuthor',
-  'gallery-title': 'galleryTitle',
-  'caption': 'imageCaption'
+  'story-text': 'tagline', // Map to tagline for universal sync
+  'story-title': 'heroTitle',
+  'testimonial-text': 'tagline', // Map to tagline for universal sync
+  'author': 'testimonialsAuthor',
+  'gallery-title': 'heroTitle',
+  'caption': 'tagline' // Map to tagline for universal sync
 };
 
 // Color property mapping for different elements
@@ -265,60 +268,43 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           // Map to correct Template8Data property with section-aware logic
           let textDataProperty = ELEMENT_TO_DATA_MAPPING[enhancedElement.elementRole as keyof typeof ELEMENT_TO_DATA_MAPPING];
           
-          // Enhanced fallback logic for better text mapping
+          // UNIVERSAL TEXT MAPPING - Works across ALL sections
           if (!textDataProperty) {
             const section = enhancedElement.sectionId;
             const role = enhancedElement.elementRole;
             
-            console.log('[QuickEditSidebar] No direct mapping found, using fallback logic for:', { section, role });
+            console.log('[QuickEditSidebar] Using UNIVERSAL text mapping for:', { section, role });
             
-            // Hero section mappings
-            if (section === 'hero') {
-              if (role.includes('title') || role.includes('heading') || role.includes('h1')) {
-                textDataProperty = 'heroTitle';
-              } else if (role.includes('subtitle') || role.includes('subheading') || role.includes('h2')) {
-                textDataProperty = 'heroSubtitle';
-              } else if (role.includes('tagline') || role.includes('description') || role.includes('p') || role.includes('text')) {
-                textDataProperty = 'tagline'; // This should catch tagline elements including role 'text'
-              } else if (role.includes('cta') || role.includes('button')) {
-                textDataProperty = 'heroCtaText';
-              }
-            }
-            // Stories section mappings  
-            else if (section === 'stories') {
-              if (role.includes('text') || role.includes('paragraph')) {
-                textDataProperty = 'storiesText';
-              } else if (role.includes('title') || role.includes('heading')) {
-                textDataProperty = 'storiesTitle';
-              }
+            // Universal role-based mapping that works regardless of section
+            if (role.includes('title') || role.includes('heading') || role.includes('h1')) {
+              // Priority mapping for titles
+              if (section === 'hero') textDataProperty = 'heroTitle';
+              else if (section === 'stories') textDataProperty = 'storiesTitle';
+              else if (section === 'gallery') textDataProperty = 'galleryTitle';
+              else textDataProperty = 'heroTitle'; // Default fallback
             } 
-            // Testimonials section mappings
-            else if (section === 'testimonials') {
-              if (role.includes('text') || role.includes('quote')) {
-                textDataProperty = 'testimonialsText';
-              } else if (role.includes('author') || role.includes('name')) {
-                textDataProperty = 'testimonialsAuthor';
-              }
-            } 
-            // Gallery section mappings
-            else if (section === 'gallery') {
-              if (role.includes('title')) {
-                textDataProperty = 'galleryTitle';
-              } else if (role.includes('caption')) {
-                textDataProperty = 'galleryCaption';
-              }
+            else if (role.includes('subtitle') || role.includes('subheading') || role.includes('h2')) {
+              textDataProperty = 'heroSubtitle';
             }
-            // Generic fallback based on element characteristics
+            else if (role.includes('tagline') || role.includes('description') || 
+                     role.includes('text') || role.includes('paragraph') || role.includes('p')) {
+              // ANY text-like element gets mapped to tagline for universal sync
+              textDataProperty = 'tagline';
+              console.log('[QuickEditSidebar] UNIVERSAL TEXT MAPPING: Any text element → tagline');
+            }
+            else if (role.includes('cta') || role.includes('button')) {
+              textDataProperty = 'heroCtaText';
+            }
+            else if (role.includes('author') || role.includes('name')) {
+              textDataProperty = 'testimonialsAuthor';
+            }
+            else if (role.includes('caption')) {
+              textDataProperty = 'galleryCaption';
+            }
             else {
-              if (role.includes('title') || role.includes('heading') || role.includes('h1') || role.includes('h2')) {
-                textDataProperty = 'heroTitle'; // Default to hero title for headings
-              } else if (role.includes('subtitle') || role.includes('subheading')) {
-                textDataProperty = 'heroSubtitle';
-              } else if (role.includes('tagline') || role.includes('description')) {
-                textDataProperty = 'tagline';
-              } else if (role.includes('text') || role.includes('paragraph') || role.includes('p')) {
-                textDataProperty = 'description'; // Default to description for text
-              }
+              // ULTIMATE FALLBACK: If we can't identify the role, assume it's general text content
+              textDataProperty = 'tagline';
+              console.log('[QuickEditSidebar] ULTIMATE FALLBACK: Unknown role → tagline');
             }
           }
           
@@ -332,46 +318,31 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
             });
             updateData(updates, immediate);
           } else {
-            console.warn('[QuickEditSidebar] No text mapping found for:', { 
+            // THIS SHOULD NEVER HAPPEN with the universal mapping above
+            console.error('[QuickEditSidebar] CRITICAL: Universal mapping failed for:', { 
               section: enhancedElement.sectionId,
               role: enhancedElement.elementRole 
             });
             
-            // DIRECT FALLBACK: Try to update common properties directly
-            const role = enhancedElement.elementRole;
-            let fallbackUpdates = null;
-            
-            if (role && (role.includes('tagline') || role.includes('subtitle') || 
-                        (role.includes('hero') && role.includes('p')))) {
-              fallbackUpdates = { 
-                tagline: value,
-                heroSubtitle: value, // Also try heroSubtitle as a backup
-                description: value   // And description as another backup
-              };
-              console.log('[QuickEditSidebar] Using DIRECT FALLBACK for tagline-like element:', fallbackUpdates);
-            } else if (role && (role.includes('title') || role.includes('heading') || role.includes('h1'))) {
-              fallbackUpdates = { 
-                heroTitle: value,
-                businessName: value  // Also try business name
-              };
-              console.log('[QuickEditSidebar] Using DIRECT FALLBACK for title-like element:', fallbackUpdates);
-            } else {
-              // AGGRESSIVE FALLBACK: Update ALL possible text properties to ensure sync
-              fallbackUpdates = { 
-                tagline: value,
-                description: value,
-                heroSubtitle: value,
-                heroTitle: value,
-                businessName: value,
-                // Add timestamp to verify the update actually happened
-                _lastQuickEdit: `${Date.now()}: ${value.substring(0, 20)}`
-              };
-              console.log('[QuickEditSidebar] Using AGGRESSIVE FALLBACK for ANY text element:', fallbackUpdates);
-            }
-            
-            if (fallbackUpdates) {
-              updateData(fallbackUpdates, true); // Immediate update for fallback
-            }
+            // EMERGENCY FALLBACK: Force update ALL possible text properties
+            const emergencyUpdates = { 
+              tagline: value,
+              description: value,
+              heroSubtitle: value,
+              heroTitle: value,
+              businessName: value,
+              storiesTitle: value,
+              storiesText: value,
+              testimonialsText: value,
+              testimonialsAuthor: value,
+              galleryTitle: value,
+              galleryCaption: value,
+              // Add timestamp to verify the update actually happened
+              _lastQuickEdit: `${Date.now()}: ${value.substring(0, 20)}`,
+              _emergencyFallback: true
+            };
+            console.log('[QuickEditSidebar] EMERGENCY FALLBACK: Updating ALL text properties:', emergencyUpdates);
+            updateData(emergencyUpdates, true); // Immediate update for emergency fallback
           }
           break;
           
