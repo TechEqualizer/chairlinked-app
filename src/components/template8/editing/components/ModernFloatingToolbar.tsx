@@ -151,7 +151,7 @@ const ModernFloatingToolbar: React.FC<ModernFloatingToolbarProps> = ({
             const showSeparatorAfter = (onAIChat || onQuickEdit) && index >= 6 && index === finalToolbarItems.length - (onQuickEdit ? 1 : 0);
             
             return (
-              <React.Fragment key={item.id}>
+              <div key={item.id} className="flex items-center">
                 {showSeparatorBefore && <div className="w-px h-6 bg-gray-200 mx-1" />}
                 {showSeparatorAfter && <div className="w-px h-6 bg-gray-200 mx-1" />}
                 <motion.button
@@ -178,7 +178,7 @@ const ModernFloatingToolbar: React.FC<ModernFloatingToolbarProps> = ({
                     {item.label} <span className="text-gray-400 text-xs">{item.shortcut}</span>
                   </div>
                 </motion.button>
-              </React.Fragment>
+              </div>
             );
           })}
         </div>
