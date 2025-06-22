@@ -154,15 +154,6 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Enhanced update function that uses either unified system or legacy
   const updateData = useCallback((updates: any, immediate: boolean = false) => {
-    console.log('💥 [QuickEditSidebar] UPDATE DATA CALLED:', {
-      updates,
-      immediate,
-      legacyMode,
-      hasOnDataUpdate: !!onDataUpdateRef.current,
-      updateKeys: Object.keys(updates),
-      onDataUpdateFunction: onDataUpdateRef.current?.toString().substring(0, 100)
-    });
-    
     // Mark that we have unsaved changes
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
@@ -170,22 +161,15 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     if (legacyMode) {
       // Legacy debounced update
       if (immediate) {
-        console.log('⚡ [QuickEditSidebar] Calling onDataUpdate IMMEDIATELY with:', updates);
-        console.log('⚡ [QuickEditSidebar] onDataUpdate function exists?', !!onDataUpdateRef.current);
-        const result = onDataUpdateRef.current(updates);
-        console.log('⚡ [QuickEditSidebar] onDataUpdate result:', result);
+        onDataUpdateRef.current(updates);
       } else {
-        // Use the old debouncing logic
-        console.log('⏰ [QuickEditSidebar] Scheduling debounced update with:', updates);
+        // Use debouncing for non-immediate updates
         setTimeout(() => {
-          console.log('⏰ [QuickEditSidebar] Executing debounced update with:', updates);
-          const result = onDataUpdateRef.current(updates);
-          console.log('⏰ [QuickEditSidebar] Debounced onDataUpdate result:', result);
+          onDataUpdateRef.current(updates);
         }, 500);
       }
     } else if (syncAPI) {
       // Use unified sync system
-      console.log('🔄 [QuickEditSidebar] Using unified sync for updates:', updates);
       syncAPI.updateData(updates, {
         immediate,
         source: 'quick-edit-sidebar',
@@ -193,7 +177,6 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
       });
     } else {
       // Fallback to legacy if syncAPI is null
-      console.log('🆘 [QuickEditSidebar] Emergency fallback to onDataUpdate:', updates);
       onDataUpdateRef.current(updates);
     }
   }, [legacyMode, syncAPI]);
@@ -456,22 +439,10 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
 
   // Enhanced text input handler with editing state management
   const handleTextInputChange = (value: string) => {
-    console.log('🔥 [QuickEditSidebar] TEXT CHANGE DETECTED:', {
+    console.log('[QuickEditSidebar] Text change:', {
       value,
-      selectedElement: selectedElement ? {
-        id: selectedElement.id,
-        elementRole: selectedElement.elementRole,
-        sectionId: selectedElement.sectionId,
-        type: selectedElement.type,
-        tagName: selectedElement.element?.tagName,
-        className: selectedElement.element?.className
-      } : null,
-      currentSectionData: sectionDataRef.current ? {
-        businessName: sectionDataRef.current.businessName,
-        tagline: sectionDataRef.current.tagline,
-        heroTitle: sectionDataRef.current.heroTitle,
-        heroSubtitle: sectionDataRef.current.heroSubtitle
-      } : 'NO SECTION DATA'
+      section: selectedElement?.sectionId,
+      role: selectedElement?.elementRole
     });
     
     setLocalTextContent(value);
@@ -484,14 +455,6 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
     
     // Use debounced update for data persistence
     handleQuickEdit('textContent', value, false);
-    
-    // FORCE IMMEDIATE TEST UPDATE to verify data flow
-    console.log('🚀 [QuickEditSidebar] FORCING IMMEDIATE TEST UPDATE');
-    updateData({ 
-      tagline: value, 
-      _testSync: `${Date.now()}: ${value}`,
-      _immediateUpdate: true 
-    }, true);
   };
 
   // Handle focus events to manage editing state
@@ -649,23 +612,6 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
               Pro
             </Button>
             
-            {/* DEBUG: Test button to verify data flow */}
-            <Button
-              onClick={() => {
-                const testData = { 
-                  tagline: `Test ${Date.now()}`,
-                  heroSubtitle: `Test ${Date.now()}`,
-                  description: `Test ${Date.now()}`
-                };
-                console.log('[QuickEditSidebar] TEST BUTTON: Direct state update with:', testData);
-                updateData(testData, true);
-              }}
-              size="sm"
-              variant="outline"
-              className="text-xs px-2 py-1 h-6 border-yellow-400 text-yellow-600"
-            >
-              Test
-            </Button>
           </div>
         </div>
         <div className="flex items-center justify-between">
