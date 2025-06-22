@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useQuickEditorSync } from '../hooks/useEditorSync';
 // DISABLED: import { useEditorSyncContext } from '../context/EditorSyncProvider';
-import { applyDesignSystemOverride, restoreDesignSystemOverrides } from '../utils/designSystemOverrides';
+import { applyDesignSystemOverride, restoreDesignSystemOverrides, restoreUniversalColorOverrides } from '../utils/designSystemOverrides';
 
 interface QuickEditSidebarProps {
   selectedElement: any;
@@ -133,6 +133,7 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
   // Restore design system overrides on component mount
   useEffect(() => {
     restoreDesignSystemOverrides();
+    restoreUniversalColorOverrides();
   }, []);
 
   // Update local state when selectedElement changes
@@ -338,67 +339,100 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
           break;
           
         case 'color':
-          // Apply color override using CSS custom properties for design system integration
-          applyDesignSystemOverride(element, 'color', value, enhancedElement);
+          // UNIVERSAL COLOR APPLICATION - Works on ANY element regardless of design system
+          console.log('[QuickEditSidebar] Applying color to ANY element:', {
+            element: element.tagName,
+            currentColor: element.style.color || getComputedStyle(element).color,
+            newColor: value,
+            role: enhancedElement.elementRole,
+            section: enhancedElement.sectionId
+          });
           
-          // UNIVERSAL COLOR MAPPING - Works across ALL sections like text mapping
+          // METHOD 1: Direct inline style (works on ANY element)
+          element.style.color = value;
+          element.style.setProperty('color', value, 'important');
+          
+          // METHOD 2: Also try design system override for compatible elements
+          try {
+            applyDesignSystemOverride(element, 'color', value, enhancedElement);
+          } catch (error) {
+            console.log('[QuickEditSidebar] Design system override failed, using direct styling');
+          }
+          
+          // METHOD 3: Apply to child text nodes if needed
+          const textNodes = element.querySelectorAll('*');
+          textNodes.forEach(child => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+              const childElement = child as HTMLElement;
+              // Only apply to text-containing elements
+              if (childElement.children.length === 0 && childElement.textContent?.trim()) {
+                childElement.style.color = value;
+                childElement.style.setProperty('color', value, 'important');
+              }
+            }
+          });
+          
+          // METHOD 4: Create persistent CSS rule for this specific element
+          const elementId = `quick-edit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          element.setAttribute('data-quick-edit-id', elementId);
+          
+          let styleSheet = document.getElementById('quick-edit-universal-overrides') as HTMLStyleElement;
+          if (!styleSheet) {
+            styleSheet = document.createElement('style');
+            styleSheet.id = 'quick-edit-universal-overrides';
+            document.head.appendChild(styleSheet);
+          }
+          
+          // Add high-specificity rule for this exact element
+          const cssRule = `[data-quick-edit-id="${elementId}"], [data-quick-edit-id="${elementId}"] * { color: ${value} !important; }`;
+          styleSheet.textContent += cssRule + '\n';
+          
+          // UNIVERSAL COLOR MAPPING for data model sync
           let colorProperty = COLOR_PROPERTY_MAPPING[enhancedElement.elementRole as keyof typeof COLOR_PROPERTY_MAPPING];
           
           if (!colorProperty) {
             const section = enhancedElement.sectionId;
             const role = enhancedElement.elementRole;
             
-            console.log('[QuickEditSidebar] Using UNIVERSAL color mapping for:', { section, role });
-            
-            // Universal role-based color mapping that works regardless of section
+            // Universal role-based color mapping
             if (role.includes('title') || role.includes('heading') || role.includes('h1')) {
-              // Priority mapping for titles
-              if (section === 'hero') colorProperty = 'heroTitleColor';
-              else if (section === 'stories') colorProperty = 'storiesTitleColor';
-              else if (section === 'gallery') colorProperty = 'galleryTitleColor';
-              else colorProperty = 'heroTitleColor'; // Default fallback
+              colorProperty = 'heroTitleColor';
             } 
             else if (role.includes('subtitle') || role.includes('subheading') || role.includes('h2')) {
               colorProperty = 'heroSubtitleColor';
             }
-            else if (role.includes('tagline') || role.includes('description') || 
-                     role.includes('text') || role.includes('paragraph') || role.includes('p')) {
-              // ANY text-like element gets mapped to primary text color
-              colorProperty = 'textColor';
-              console.log('[QuickEditSidebar] UNIVERSAL COLOR MAPPING: Any text element → textColor');
-            }
-            else if (role.includes('cta') || role.includes('button')) {
-              colorProperty = 'heroCtaColor';
-            }
-            else if (role.includes('author') || role.includes('name')) {
-              colorProperty = 'testimonialAuthorColor';
-            }
-            else if (role.includes('caption')) {
-              colorProperty = 'captionColor';
-            }
             else {
-              // ULTIMATE FALLBACK: If we can't identify the role, use primary text color
+              // Default to primary text color for universal sync
               colorProperty = 'textColor';
-              console.log('[QuickEditSidebar] ULTIMATE COLOR FALLBACK: Unknown role → textColor');
             }
           }
           
-          // DUAL UPDATE: Update both specific property and apply universal color properties
+          // Store override in sessionStorage for persistence
+          const overrideKey = `universalColorOverrides`;
+          const existingOverrides = JSON.parse(sessionStorage.getItem(overrideKey) || '{}');
+          existingOverrides[elementId] = {
+            color: value,
+            selector: `[data-quick-edit-id="${elementId}"]`,
+            timestamp: Date.now()
+          };
+          sessionStorage.setItem(overrideKey, JSON.stringify(existingOverrides));
+          
+          // Update data model for editor sync
           const colorUpdates = { 
             [colorProperty]: value,
-            // Also update primary color properties to ensure sync
             primaryTextColor: value,
-            _lastColorEdit: `${Date.now()}: ${value}`
+            _lastColorEdit: `${Date.now()}: ${value}`,
+            _universalColorOverride: elementId
           };
           
-          console.log('[QuickEditSidebar] Color update mapping:', { 
-            section: enhancedElement.sectionId,
-            role: enhancedElement.elementRole, 
-            property: colorProperty, 
+          console.log('[QuickEditSidebar] UNIVERSAL color application complete:', { 
+            elementId,
+            cssRule,
+            colorProperty,
             value,
-            allUpdates: colorUpdates
+            dataUpdates: colorUpdates
           });
-          updateData(colorUpdates, true); // Color changes are immediate
+          updateData(colorUpdates, true);
           break;
           
         case 'fontSize':
@@ -627,6 +661,26 @@ const QuickEditSidebar: React.FC<QuickEditSidebarProps> = ({
             >
               <Maximize2 className="w-3 h-3 mr-1" />
               Pro
+            </Button>
+            
+            {/* TEMP: Color test button for debugging */}
+            <Button
+              onClick={() => {
+                const testColorData = { 
+                  textColor: '#ff6b6b',
+                  heroTitleColor: '#4ecdc4', 
+                  heroSubtitleColor: '#45b7d1',
+                  primaryTextColor: '#ff6b6b',
+                  _colorTest: `${Date.now()}`
+                };
+                console.log('[QuickEditSidebar] COLOR TEST: Direct color update with:', testColorData);
+                updateData(testColorData, true);
+              }}
+              size="sm"
+              variant="outline"
+              className="text-xs px-2 py-1 h-6 border-red-400 text-red-600"
+            >
+              🎨 Test Colors
             </Button>
             
           </div>

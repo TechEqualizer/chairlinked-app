@@ -4,7 +4,7 @@ import { editingSections } from "./config/editingSections";
 import { useEditingFlow } from "./hooks/useEditingFlow";
 import { useEditMode } from "@/components/chairlinked/editing/EditModeContext";
 import { useEditingHotkeys } from "./hooks/useEditingHotkeys";
-import { restoreDesignSystemOverrides } from "./utils/designSystemOverrides";
+import { restoreDesignSystemOverrides, restoreUniversalColorOverrides } from "./utils/designSystemOverrides";
 // import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
 // import { useAuthContext } from "@/components/auth/AuthProvider";
 // import { useUndoRedo } from "./hooks/useUndoRedo";
@@ -63,6 +63,7 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
   // Restore design system overrides from Quick Editor
   React.useEffect(() => {
     restoreDesignSystemOverrides();
+    restoreUniversalColorOverrides();
   }, []);
 
   // Session recovery temporarily disabled

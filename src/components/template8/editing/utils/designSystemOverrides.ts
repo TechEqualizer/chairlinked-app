@@ -135,3 +135,73 @@ export const getDesignSystemOverrides = () => {
   
   return allOverrides;
 };
+
+// UNIVERSAL COLOR OVERRIDES - Works on ANY element regardless of design system
+export const restoreUniversalColorOverrides = () => {
+  const overrideKey = 'universalColorOverrides';
+  const overrides = JSON.parse(sessionStorage.getItem(overrideKey) || '{}');
+  
+  if (Object.keys(overrides).length === 0) return;
+  
+  console.log('[DesignSystemOverrides] Restoring universal color overrides:', overrides);
+  
+  // Create or get the universal overrides stylesheet
+  let styleSheet = document.getElementById('quick-edit-universal-overrides') as HTMLStyleElement;
+  if (!styleSheet) {
+    styleSheet = document.createElement('style');
+    styleSheet.id = 'quick-edit-universal-overrides';
+    document.head.appendChild(styleSheet);
+  }
+  
+  // Clear existing content
+  styleSheet.textContent = '';
+  
+  // Apply each override
+  Object.entries(overrides).forEach(([elementId, override]: [string, any]) => {
+    const { color, selector } = override;
+    
+    // Create CSS rule for this element
+    const cssRule = `${selector}, ${selector} * { color: ${color} !important; }`;
+    styleSheet.textContent += cssRule + '\n';
+    
+    // Also apply direct inline styles to matching elements
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(element => {
+      const htmlElement = element as HTMLElement;
+      htmlElement.style.color = color;
+      htmlElement.style.setProperty('color', color, 'important');
+      
+      // Apply to child text nodes
+      const textNodes = htmlElement.querySelectorAll('*');
+      textNodes.forEach(child => {
+        const childElement = child as HTMLElement;
+        if (childElement.children.length === 0 && childElement.textContent?.trim()) {
+          childElement.style.color = color;
+          childElement.style.setProperty('color', color, 'important');
+        }
+      });
+    });
+  });
+  
+  console.log(`[DesignSystemOverrides] Restored ${Object.keys(overrides).length} universal color overrides`);
+};
+
+// Clear universal color overrides
+export const clearUniversalColorOverrides = () => {
+  sessionStorage.removeItem('universalColorOverrides');
+  
+  const styleSheet = document.getElementById('quick-edit-universal-overrides');
+  if (styleSheet) {
+    styleSheet.remove();
+  }
+  
+  // Remove data attributes from elements
+  const elements = document.querySelectorAll('[data-quick-edit-id]');
+  elements.forEach(element => {
+    element.removeAttribute('data-quick-edit-id');
+    const htmlElement = element as HTMLElement;
+    htmlElement.style.removeProperty('color');
+  });
+  
+  console.log('[DesignSystemOverrides] Cleared all universal color overrides');
+};
