@@ -2,7 +2,7 @@
 import { Template8Data } from '../hooks/useTemplate8Data';
 
 export const defaultTemplate8Data: Template8Data = {
-  businessName: "Creative Studio",
+  businessName: "",
   tagline: "Where Creativity Meets Innovation",
   description: "We transform ideas into stunning digital experiences that captivate and inspire.",
   heroImage: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43",

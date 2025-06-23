@@ -53,8 +53,8 @@ const MemoizedHeroMainHeadline: React.FC<MemoizedHeroMainHeadlineProps> = memo((
       } as const,
       fontWeightClass: getFontWeightClass(pageData.fontWeight || DEFAULT_FONT_WEIGHT),
       fontClass: pageData.fontClass || "font-sans",
-      // Prioritize headline field over businessName
-      headlineText: pageData.headline || pageData.businessName || ""
+      // Only use headline field, no business name fallback
+      headlineText: pageData.headline || ""
     };
   }, [
     pageData.textColor,
@@ -66,8 +66,7 @@ const MemoizedHeroMainHeadline: React.FC<MemoizedHeroMainHeadlineProps> = memo((
     pageData.lineHeight,
     pageData.fontWeight,
     pageData.fontClass,
-    pageData.headline,
-    pageData.businessName
+    pageData.headline
   ]);
 
   // Hide component completely in preview mode if no headline content
