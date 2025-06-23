@@ -35,6 +35,9 @@ const SectionAwareSidebar: React.FC<SectionAwareSidebarProps> = ({
   const [isExpanded, setIsExpanded] = useState(true);
   const [showSectionEditor, setShowSectionEditor] = useState(false);
   
+  // Get section visibility configuration
+  const { isSectionVisible, getVisibleSections } = useSectionManager(pageData);
+  
   const {
     currentSectionIndex,
     sectionElements,
@@ -48,6 +51,17 @@ const SectionAwareSidebar: React.FC<SectionAwareSidebarProps> = ({
         onSectionChange(index);
       }
     }
+  });
+
+  // Filter sections by visibility
+  const visibleSectionElements = sectionElements.filter(section => 
+    isSectionVisible(section.id)
+  );
+
+  console.log('[SectionAwareSidebar] Section visibility filtering:', {
+    allSections: sectionElements.map(s => s.id),
+    visibleSections: getVisibleSections(),
+    filteredSections: visibleSectionElements.map(s => s.id)
   });
 
   const currentSection = getCurrentSection();
@@ -131,7 +145,7 @@ const SectionAwareSidebar: React.FC<SectionAwareSidebarProps> = ({
             {/* Section Navigator */}
             <div className="p-3 border-b border-gray-100">
               <div className="flex flex-col gap-1">
-                {sectionElements.map((section, index) => {
+                {visibleSectionElements.map((section, index) => {
                   const isActive = index === currentSectionIndex;
                   
                   return (

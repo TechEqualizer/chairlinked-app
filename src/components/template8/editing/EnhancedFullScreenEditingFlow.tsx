@@ -4,6 +4,7 @@ import { editingSections } from "./config/editingSections";
 import { useEditingFlow } from "./hooks/useEditingFlow";
 import { useEditMode } from "@/components/chairlinked/editing/EditModeContext";
 import { useEditingHotkeys } from "./hooks/useEditingHotkeys";
+import { useSectionManager } from "./hooks/useSectionManager";
 import { restoreDesignSystemOverrides, restoreUniversalColorOverrides } from "./utils/designSystemOverrides";
 // import { useUnifiedAutoSave } from "./hooks/useUnifiedAutoSave";
 // import { useAuthContext } from "@/components/auth/AuthProvider";
@@ -66,6 +67,20 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     restoreUniversalColorOverrides();
   }, []);
 
+  // Get section visibility configuration
+  const { getVisibleSections, isSectionVisible } = useSectionManager(pageData);
+  
+  // Filter editing sections by visibility
+  const visibleEditingSections = editingSections.filter(section => 
+    isSectionVisible(section.id)
+  );
+
+  console.log('[EnhancedFullScreenEditingFlow] Section visibility:', {
+    allSections: editingSections.map(s => s.id),
+    visibleSections: getVisibleSections(),
+    filteredEditingSections: visibleEditingSections.map(s => s.id)
+  });
+
   // Session recovery temporarily disabled
   // TODO: Re-enable after fixing auto-save system
 
@@ -92,8 +107,11 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
     pageData,
     onUpdate,
     onSave,
-    totalSections: editingSections.length
+    totalSections: visibleEditingSections.length
   });
+
+  // Get current section from visible sections
+  const currentSection = visibleEditingSections[currentSectionIndex];
 
   // Temporarily disable auto-save to prevent white screen
   // Enable unified auto-save system
@@ -164,11 +182,11 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
   }, [currentSectionIndex, originalHandlePrevious]);
 
   const handleNextSection = useCallback(() => {
-    const nextIndex = Math.min(currentSectionIndex + 1, editingSections.length - 1);
+    const nextIndex = Math.min(currentSectionIndex + 1, visibleEditingSections.length - 1);
     if (nextIndex !== currentSectionIndex) {
       handleSectionNavigate(nextIndex);
     }
-  }, [currentSectionIndex, handleSectionNavigate]);
+  }, [currentSectionIndex, handleSectionNavigate, visibleEditingSections.length]);
 
   // Enhanced save function with simplified authentication
   const handleEnhancedSave = async () => {
@@ -443,7 +461,7 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
         showCompactMenu={showCompactMenu}
         setShowCompactMenu={setShowCompactMenu}
         currentSectionIndex={currentSectionIndex}
-        editingSections={editingSections}
+        editingSections={visibleEditingSections}
         handleSectionNavigate={handleSectionNavigate}
         handleEnhancedSave={handleEnhancedSave}
         handleCloseEditing={handleCloseEditing}
@@ -455,7 +473,7 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
         isSaving={isSaving}
         onNavigateToDashboard={handleNavigateToDashboard}
         canGoPrevious={currentSectionIndex > 0}
-        canGoNext={currentSectionIndex < editingSections.length - 1}
+        canGoNext={currentSectionIndex < visibleEditingSections.length - 1}
         isAdmin={isAdmin}
         sectionData={sectionData}
         onNavigateToAdmin={onNavigateToAdmin}
@@ -476,7 +494,7 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
         swipeDirection={swipeDirection}
         currentSection={currentSection}
         currentSectionIndex={currentSectionIndex}
-        editingSections={editingSections}
+        editingSections={visibleEditingSections}
         sectionData={sectionData}
         handleSectionUpdate={handleSectionUpdate}
         heroSectionRef={heroSectionRef}
