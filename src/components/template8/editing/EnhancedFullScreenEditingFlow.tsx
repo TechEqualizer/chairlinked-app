@@ -156,8 +156,6 @@ const EnhancedFullScreenEditingFlow: React.FC<EnhancedFullScreenEditingFlowProps
   );
   */
 
-  const currentSection = editingSections[currentSectionIndex];
-  
   // Use original undo/redo for now
   const canUndo = regenerationHistory.some(entry =>
     entry.sectionIndex === currentSectionIndex && entry.action === 'regenerate_start'
